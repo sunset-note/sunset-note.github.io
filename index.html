@@ -122,6 +122,14 @@ th:first-child,td:first-child{text-align:left}
 .kc-big{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;min-height:30px;margin-bottom:4px}
 .kc-big .now{font:500 22px var(--mono);letter-spacing:-.02em}
 .presets button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+/* 내 포트폴리오 */
+select{width:100%;font:500 14px var(--font);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+input[type=datetime-local]{width:100%;font:500 13px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+.pf-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;align-items:end;margin:12px 0 6px}
+.pf-form .wide{grid-column:span 2}
+.btn{font:600 13px var(--font);background:var(--ink);color:var(--panel);border:0;border-radius:7px;padding:9px 12px;cursor:pointer}
+.pf-del{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 6px}
+.pf-del:hover{color:var(--up)}
 </style>
 
 <div class="ticker"><div class="in">
@@ -160,6 +168,29 @@ th:first-child,td:first-child{text-align:left}
       <div class="presets" id="kcRange"></div>
       <p class="hint" id="kcNote" style="max-width:70ch"></p>
     </div>
+  </section>
+
+  <section class="card" style="margin-bottom:18px">
+    <div class="kc-top">
+      <h2>내 포트폴리오</h2>
+      <p class="hint">기록은 이 기기의 브라우저에만 저장되고, 다른 사람에게는 보이지 않습니다.</p>
+    </div>
+    <section class="kpis" id="pfKpis"></section>
+    <form class="pf-form" id="pfForm">
+      <label class="field wide"><span>일시</span><input type="datetime-local" id="pfT" required></label>
+      <label class="field"><span>거래소</span><select id="pfEx"><option value="bithumb">빗썸</option><option value="upbit">업비트</option></select></label>
+      <label class="field"><span>구분</span><select id="pfSide"><option value="buy">매수</option><option value="sell">매도</option></select></label>
+      <label class="field"><span>자금</span><select id="pfFund"><option value="own">내 돈</option><option value="loan">마통</option></select></label>
+      <label class="field"><span>수량 (USDT)</span><input type="number" id="pfQty" min="0" step="any" required></label>
+      <label class="field"><span>가격 (원)</span><input type="number" id="pfPx" min="0" step="any" required></label>
+      <label class="field"><span>헤지 (계약 수)</span><input type="number" id="pfHedge" min="0" step="1" placeholder="0"></label>
+      <button type="submit" class="btn">기록 추가</button>
+    </form>
+    <p class="hint" id="pfHint"></p>
+    <div class="tablewrap" style="max-height:320px;margin-top:6px">
+      <table><thead><tr><th>일시</th><th>거래소</th><th>구분</th><th>자금</th><th>수량</th><th>가격</th><th>금액(원)</th><th>그때 김프</th><th>헤지</th><th></th></tr></thead><tbody id="pfRows"></tbody></table>
+    </div>
+    <div class="presets" style="margin-top:10px"><button type="button" id="pfExport">백업 코드 복사</button><button type="button" id="pfImport">백업 코드 불러오기</button></div>
   </section>
 
   <div class="grid">
@@ -894,7 +925,102 @@ async function tick(){
   const hm = ms => new Date(ms + KST*1000).toISOString().slice(11,16);
   $('tkTime').textContent = ok ? `${hm(Date.now())} 갱신` + (LIVE.fxTs ? ` · 환율 ${hm(LIVE.fxTs)} 기준` : '') : '실시간 연결 안 됨';
   if (ok) setKC(false);
+  pfRender();
 }
+
+// ---- 내 포트폴리오 (브라우저 저장) ----
+const PFK = 'kimp-pf1', FEE = {bithumb:0.04, upbit:0.05};
+let PF = {trades:[]};
+try { const s = JSON.parse(localStorage.getItem(PFK) || 'null'); if (s && Array.isArray(s.trades)) PF = s; } catch(e){}
+const pfSave = () => { try { localStorage.setItem(PFK, JSON.stringify(PF)); } catch(e){} };
+const won = v => Math.round(v).toLocaleString('ko-KR');
+const man = v => (v/1e4).toLocaleString('ko-KR', {maximumFractionDigits:0}) + '만원';
+function fxAt(ts, ex){   // 그 시각 환율: 최근이면 실시간, 아니면 페이지 데이터의 1시간봉 → 일봉
+  if (LIVE.fx && Math.abs(Date.now()/1000 - ts) < 3*HR) return LIVE.fx;
+  const h = SERH[ex], i = Math.floor((ts - (h.t[0]-HR)) / HR);
+  if (i >= 0 && i < h.n) return h.fx[i];
+  const s = SER[ex], j = Math.floor((ts + (ex==='bithumb'?KST:0) - s.t[0]) / DAY);
+  if (j >= 0 && j < s.n) return s.fx[j];
+  return LIVE.fx || null;
+}
+function pfCalc(){
+  const pos = {}, now = Date.now()/1000; let realized = 0, sells = 0, hedge = 0, interest = 0;
+  const rate = (S.rate || 0) / 100;
+  for (const t of PF.trades.slice().sort((a,b) => a.t-b.t)){
+    const key = t.ex+'|'+t.fund, p = pos[key] || (pos[key] = {ex:t.ex, fund:t.fund, qty:0, cost:0, kc:0, since:null});
+    const fee = FEE[t.ex]/100;
+    if (t.side==='buy'){
+      if (!p.qty) p.since = t.t;
+      const c = t.qty*t.px*(1+fee); p.qty += t.qty; p.cost += c; if (t.k!=null) p.kc += c*t.k;
+      hedge += t.hedge||0;
+    } else {
+      const q = Math.min(t.qty, p.qty); if (!q) continue;
+      const share = q/p.qty, c = p.cost*share;
+      if (t.fund==='loan' && p.since!=null) interest += c * rate * (t.t - p.since) / (365*DAY);
+      realized += q*t.px*(1-fee) - c; sells++;
+      p.qty -= q; p.cost -= c; p.kc -= p.kc*share; hedge -= t.hedge||0;
+      if (p.qty < 1e-9){ p.qty = 0; p.cost = 0; p.kc = 0; p.since = null; }
+    }
+  }
+  let qty=0, cost=0, kc=0, value=0, own=0, loan=0, hedgedPnl=0, haveK=0;
+  for (const p of Object.values(pos)){ if (!p.qty) continue;
+    const px = LIVE.tick[p.ex] || null, fee = FEE[p.ex]/100;
+    qty += p.qty; cost += p.cost; kc += p.kc; if (p.fund==='loan') loan += p.qty; else own += p.qty;
+    value += p.qty * (px || p.cost/p.qty) * (1-fee);
+    if (p.fund==='loan' && p.since!=null) interest += p.cost * rate * (now - p.since) / (365*DAY);
+    if (px && LIVE.fx && p.kc){ const kb = p.kc/p.cost, kn = (px/LIVE.fx-1)*100; hedgedPnl += p.cost*((1+kn/100)/(1+kb/100)*(1-fee)-1); haveK++; }
+  }
+  return {qty, cost, kAvg: cost ? kc/cost : null, value, own, loan, realized, sells, hedge, interest, hedgedPnl, haveK};
+}
+function pfRender(){
+  const c = pfCalc(), ex = (PF.trades.length ? PF.trades[PF.trades.length-1].ex : 'bithumb');
+  const px = LIVE.tick[ex], kn = px && LIVE.fx ? (px/LIVE.fx-1)*100 : null, upnl = c.value - c.cost;
+  $('pfKpis').innerHTML =
+    kpi('보유 테더', c.qty ? Math.round(c.qty).toLocaleString('ko-KR')+' USDT' : '–', c.qty ? `내 돈 ${Math.round(c.own).toLocaleString('ko-KR')} · 마통 ${Math.round(c.loan).toLocaleString('ko-KR')}` : '기록을 추가하세요') +
+    kpi('평균 단가', c.qty ? (c.cost/c.qty).toFixed(1)+'원' : '–', c.kAvg!=null ? `매수 평균 김프 ${fmtK(c.kAvg)}` : `투입 ${man(c.cost)}`) +
+    kpi('현재 김프', kn!=null ? fmtK(kn) : '–', px ? `${EXNAME[ex]} ${px.toLocaleString('ko-KR')}원` : '시세 대기 중', kn!=null ? cls(kn) : '') +
+    kpi('평가손익 (원화)', c.qty ? (upnl>=0?'+':'')+man(upnl) : '–', c.qty ? `${fmtP(upnl/c.cost*100)} · 수수료 반영` : '', cls(upnl)) +
+    kpi('김프 손익 (헤지 기준)', c.haveK ? (c.hedgedPnl>=0?'+':'')+man(c.hedgedPnl) : '–', '환율 변동을 빼고 김프 변화만', cls(c.hedgedPnl)) +
+    kpi('실현손익', c.sells ? (c.realized>=0?'+':'')+man(c.realized) : '–', `매도 ${c.sells}회`, cls(c.realized)) +
+    kpi('달러선물 헤지', c.hedge ? `${c.hedge}계약` : '–', c.qty ? `보유 ${Math.round(c.qty).toLocaleString('ko-KR')}달러 대비 ${(c.hedge*10000).toLocaleString('ko-KR')}달러` : '1계약 = 1만 달러') +
+    kpi('마통 이자 (추정)', c.interest ? man(c.interest) : '–', `연 ${S.rate}% · 마통 보유 기간만`);
+  const rows = PF.trades.slice().sort((a,b) => b.t-a.t);
+  $('pfRows').innerHTML = rows.length ? rows.map(t => `<tr><td>${new Date((t.t+KST)*1000).toISOString().slice(2,16).replace('T',' ')}</td><td>${EXNAME[t.ex]}</td>`
+    + `<td class="${t.side==='buy'?'down':'up'}">${t.side==='buy'?'매수':'매도'}</td><td>${t.fund==='loan'?'마통':'내 돈'}</td><td>${(+t.qty).toLocaleString('ko-KR')}</td><td>${(+t.px).toLocaleString('ko-KR')}</td>`
+    + `<td>${won(t.qty*t.px)}</td><td>${t.k!=null?fmtK(t.k):'–'}</td><td>${t.hedge||0}</td><td><button type="button" class="pf-del" data-id="${t.id}" aria-label="기록 삭제">삭제</button></td></tr>`).join('')
+    : `<tr><td colspan="10" style="text-align:center;font-family:var(--font);color:var(--muted);padding:16px">아직 기록이 없습니다.</td></tr>`;
+}
+function pfDefaults(){
+  const d = new Date(Date.now() + KST*1000); $('pfT').value = d.toISOString().slice(0,16);
+  const ex = $('pfEx').value; if (LIVE.tick[ex] && !$('pfPx').value) $('pfPx').placeholder = LIVE.tick[ex];
+}
+$('pfForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = Math.floor(Date.parse($('pfT').value + ':00+09:00')/1000), ex = $('pfEx').value, qty = parseFloat($('pfQty').value), px = parseFloat($('pfPx').value);
+  if (!(t>0) || !(qty>0) || !(px>0)){ $('pfHint').textContent = '일시, 수량, 가격을 확인해 주세요.'; return; }
+  const f = fxAt(t, ex), k = f ? +((px/f-1)*100).toFixed(3) : null;
+  PF.trades.push({id: Date.now().toString(36), t, ex, side:$('pfSide').value, fund:$('pfFund').value, qty, px, hedge: parseInt($('pfHedge').value)||0, k});
+  pfSave(); pfRender();
+  $('pfHint').textContent = `기록했습니다: ${(qty).toLocaleString('ko-KR')} USDT × ${px.toLocaleString('ko-KR')}원` + (k!=null ? ` (그때 김프 ${fmtK(k)}, 환율 ${f.toFixed(2)})` : '');
+  $('pfQty').value = ''; $('pfPx').value = ''; $('pfHedge').value = ''; pfDefaults();
+});
+$('pfRows').addEventListener('click', e => { const b = e.target.closest('.pf-del'); if (!b) return;
+  if (!confirm('이 기록을 삭제할까요?')) return; PF.trades = PF.trades.filter(t => t.id !== b.dataset.id); pfSave(); pfRender(); });
+$('pfExport').addEventListener('click', async () => {
+  const code = JSON.stringify(PF);
+  try { await navigator.clipboard.writeText(code); $('pfHint').textContent = `백업 코드를 복사했습니다(기록 ${PF.trades.length}건). 다른 기기에서 '불러오기'에 붙여 넣으세요.`; }
+  catch(e){ prompt('아래 코드를 복사하세요', code); }
+});
+$('pfImport').addEventListener('click', () => {
+  const s = prompt('백업 코드를 붙여 넣으세요. 이 기기의 기록은 대체됩니다.'); if (!s) return;
+  try { const v = JSON.parse(s);
+    if (!v || !Array.isArray(v.trades) || !v.trades.every(t => t && t.id && t.t>0 && t.qty>0 && t.px>0 && FEE[t.ex]!=null && (t.side==='buy'||t.side==='sell') && (t.fund==='own'||t.fund==='loan'))) throw 0;
+    PF = {trades: v.trades.map(t => ({id:String(t.id), t:+t.t, ex:t.ex, side:t.side, fund:t.fund, qty:+t.qty, px:+t.px, hedge:parseInt(t.hedge)||0, k: t.k==null ? null : +t.k}))};
+    pfSave(); pfRender(); $('pfHint').textContent = `불러왔습니다(기록 ${PF.trades.length}건).`;
+  } catch(e){ $('pfHint').textContent = '백업 코드를 읽지 못했습니다. 복사한 코드 전체를 붙여 넣었는지 확인해 주세요.'; }
+});
+$('pfEx').addEventListener('change', () => { $('pfPx').placeholder = LIVE.tick[$('pfEx').value] || ''; });
+pfDefaults(); pfRender();
 $('kcEx').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.v===KS.ex) return; KS.ex = b.dataset.v; saveKS(); kcUI(); setKC(true); refreshCandles(); });
 $('kcRes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.v===KS.res) return;
   KS.res = b.dataset.v; KS.range = RANGES[KS.res][0][0]; saveKS(); kcUI(); setKC(true); refreshCandles(); });
