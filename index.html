@@ -212,6 +212,15 @@ th:first-child,td:first-child{text-align:left}
         <p class="hint" id="levelsHint"></p>
         <p class="err" id="err" hidden></p>
       </div>
+      <div class="grp"><span class="lbl">자금 구성</span>
+        <div class="seg" data-key="fund"><button type="button" data-v="one">내 돈만</button><button type="button" data-v="loan">내 돈 + 마통</button></div>
+        <div class="row3" id="loanBox">
+          <label class="field"><span>마통 (만원)</span><input type="number" id="loan" min="0" step="100"></label>
+          <label class="field"><span>추가 매수 (%p 아래)</span><input type="number" id="loanGap" min="0" step="0.1"></label>
+          <label class="field"><span>이자 (연 %)</span><input type="number" id="rate" min="0" step="0.1"></label>
+        </div>
+        <p class="hint" id="fundHint"></p>
+      </div>
       <div class="grp"><span class="lbl">매도 방식</span>
         <div class="seg" data-key="sellMode"><button type="button" data-v="all">일괄 매도</button><button type="button" data-v="each">분할별 매도</button></div>
       </div>
@@ -225,7 +234,7 @@ th:first-child,td:first-child{text-align:left}
       </div>
       <div class="row2">
         <label class="field"><span>수수료 (편도 %)</span><input type="number" id="fee" min="0" step="0.01"></label>
-        <label class="field"><span>초기자본 (만원)</span><input type="number" id="cap" min="1" step="100"></label>
+        <label class="field"><span id="capLbl">초기자본 (만원)</span><input type="number" id="cap" min="1" step="100"></label>
       </div>
     </aside>
 
@@ -359,11 +368,12 @@ const cls = v => v>0?'up':v<0?'down':'';
 
 // ---- 상태 ----
 const HDEF = Array.from({length:24}, (_,h) => (h>=9&&h<=15) || h>=18 || h<=2);  // 새벽 2시 마감 봉까지
-const DEF = {ex:'upbit', res:'h', hours:'rn', hmask:HDEF, delay:1, src:'usdt', start:'', end:'', mode:'fixed', buy:0, sell:2, maDays:30, mbuy:1, msell:1, n:1, step:0.5, sellMode:'all', fill:'close', fxMode:'hedge', fee:0.05, cap:10000};
+const DEF = {ex:'bithumb', res:'h', hours:'rn', hmask:HDEF, delay:1, src:'usdt', start:'', end:'', mode:'fixed', buy:0, sell:1.5, maDays:30, mbuy:1, msell:1, n:1, step:0.5, sellMode:'all', fill:'close', fxMode:'hedge', fee:0.04, cap:7000,
+  fund:'loan', loan:5000, loanGap:0.5, rate:5};
 let S = Object.assign({}, DEF, {hmask:HDEF.slice()});
-try { const s = JSON.parse(localStorage.getItem('kimp-bt3') || 'null'); if (s) Object.assign(S, s); } catch(e){}
+try { const s = JSON.parse(localStorage.getItem('kimp-bt4') || 'null'); if (s) Object.assign(S, s); } catch(e){}
 if (!Array.isArray(S.hmask) || S.hmask.length!==24) S.hmask = HDEF.slice();
-const save = () => { try { localStorage.setItem('kimp-bt3', JSON.stringify(S)); } catch(e){} };
+const save = () => { try { localStorage.setItem('kimp-bt4', JSON.stringify(S)); } catch(e){} };
 
 function bounds(){
   if (S.res==='h'){ const s=SERH[S.ex]; return [kdate(s.t[0]), kdate(s.t[s.n-1])]; }
@@ -415,10 +425,13 @@ function slice(){
 
 // ---- 백테스트 엔진 ----
 function backtest(d, P, full){
-  const n=d.n, N=Math.max(1,Math.min(10,P.n|0)), f=P.fee/100, isMA=P.mode==='ma';
+  // LOAN: 내 돈(P.cap)과 마통(P.loan)을 두 칸으로 따로 굴림. 마통 칸은 매수선보다 loanGap 아래에서 사고, 들고 있는 동안만 이자가 붙음
+  const LOAN = P.fund==='loan' && P.loan>0;
+  const n=d.n, N=LOAN ? 2 : Math.max(1,Math.min(10,P.n|0)), f=P.fee/100, isMA=P.mode==='ma';
+  const off = j => LOAN ? (j ? P.loanGap : 0) : j*P.step;
   // 알람 모델(1시간봉): dl시간 전에도 기준선을 넘어 있었고 지금도 넘어 있어야 체결
   const dl = d.hourly ? Math.max(0, P.delay|0) : 0;
-  let cash=P.cap; const slots=new Array(N).fill(null);
+  let cash=P.cap, interest=0; const slots=new Array(N).fill(null), tcash = LOAN ? [P.cap, P.loan] : null;
   const eq = new Float64Array(n), trades=[], marks=[]; let expo=0, held=0;
   const bLine = new Float64Array(n), sLine = new Float64Array(n);
   const past = (i, test) => dl===0 || (i>=dl && d.maReady[i-dl] && test(d.k[i-dl], bLine[i-dl], sLine[i-dl]));
@@ -435,26 +448,31 @@ function backtest(d, P, full){
         const T = P.sellMode==='all' ? Si : s.level + s.gap;
         if (hi >= T && past(i, (kp,bp,sp) => kp >= (P.sellMode==='all' ? sp : T))){
           const fk = intra ? Math.max(T, lo) : k, px = base*(1+fk/100), proceeds = s.qty*px*(1-f);
-          cash += proceeds; held--; sold[j]=true; slots[j]=null;
-          if (full){ trades.push({bi:s.i, si:i, bk:s.k, sk:fk, ret:proceeds/s.cost-1, src:d.src[s.i]}); marks.push({i, s:1, k:fk}); }
+          if (LOAN) tcash[j] += proceeds; else cash += proceeds;
+          held--; sold[j]=true; slots[j]=null;
+          if (full){ trades.push({bi:s.i, si:i, bk:s.k, sk:fk, ret:proceeds/s.cost-1, src:d.src[s.i], loan:LOAN&&j===1}); marks.push({i, s:1, k:fk}); }
         }
       }
       for (let j=0;j<N;j++){
         if (slots[j] || sold[j]) continue;
-        const L = Bi - j*P.step;
-        if (lo <= L && past(i, (kp,bp) => kp <= bp - j*P.step)){
-          const fk = intra ? Math.min(L, hi) : k, px = base*(1+fk/100), amt = cash/(N-held);
-          slots[j] = {level:L, gap:Si-Bi, qty:amt*(1-f)/px, cost:amt, i, k:fk}; cash -= amt; held++;
+        const L = Bi - off(j);
+        if (lo <= L && past(i, (kp,bp) => kp <= bp - off(j))){
+          const fk = intra ? Math.min(L, hi) : k, px = base*(1+fk/100), amt = LOAN ? tcash[j] : cash/(N-held);
+          slots[j] = {level:L, gap:Si-Bi, qty:amt*(1-f)/px, cost:amt, i, k:fk}; held++;
+          if (LOAN) tcash[j] = 0; else cash -= amt;
           if (full) marks.push({i, s:0, k:fk});
         }
       }
     }
-    let v=cash; if (held){ expo++; const px=base*(1+k/100); for (const s of slots) if (s) v+=s.qty*px; }
+    if (LOAN && slots[1] && i>0) interest += P.loan * P.rate/100 * (d.t[i]-d.t[i-1]) / (365*DAY);
+    let v = LOAN ? tcash[0] + tcash[1] - P.loan - interest : cash;   // 내 돈 기준 평가금
+    if (held){ expo++; const px=base*(1+k/100); for (const s of slots) if (s) v+=s.qty*px; }
     eq[i]=v;
   }
   const r = {total: eq[n-1]/P.cap-1};
   if (!full) return r;
-  for (const s of slots) if (s){ const px=d.base[n-1]*(1+d.k[n-1]/100); trades.push({bi:s.i, si:null, bk:s.k, sk:d.k[n-1], ret:s.qty*px*(1-f)/s.cost-1, src:d.src[s.i]}); }
+  slots.forEach((s,j) => { if (s){ const px=d.base[n-1]*(1+d.k[n-1]/100); trades.push({bi:s.i, si:null, bk:s.k, sk:d.k[n-1], ret:s.qty*px*(1-f)/s.cost-1, src:d.src[s.i], loan:LOAN&&j===1}); } });
+  r.interest = interest; r.loan = LOAN;
   let peak=-Infinity, mdd=0; for (const v of eq){ if(v>peak)peak=v; const dd=v/peak-1; if(dd<mdd)mdd=dd; }
   const yrs=(d.t[n-1]-d.t[0])/(365*DAY), closed=trades.filter(t=>t.si!=null), per = d.hourly?24:1;
   const bh = new Float64Array(n), q = P.cap*(1-f)/(d.base[0]*(1+d.k[0]/100));
@@ -589,14 +607,14 @@ function render(){
   syncInputs();
   if (err) return;
   D = slice();
-  const P = Object.assign({}, S, {cap: S.cap*1e4});
+  const P = Object.assign({}, S, {cap: S.cap*1e4, loan: S.loan*1e4});
   R = backtest(D, P, true);
   const fin = R.eq[D.n-1], okN = D.ok.reduce((a,b)=>a+b,0)||1;
   let below=0, above=0;
   for (let i=0;i<D.n;i++){ if(!D.ok[i]||!D.maReady[i]) continue; if (D.k[i] <= R.bLine[i]) below++; if (D.k[i] >= R.sLine[i]) above++; }
   const unit = D.hourly ? '시간' : '날';
   $('kpis').innerHTML =
-    kpi('총수익률', fmtP(R.total*100,1), `최종 ${Math.round(fin/1e4).toLocaleString('ko-KR')}만원`, cls(R.total)) +
+    kpi('총수익률', fmtP(R.total*100,1), `최종 ${Math.round(fin/1e4).toLocaleString('ko-KR')}만원` + (R.loan ? ` · 이자 ${Math.round(R.interest/1e4).toLocaleString('ko-KR')}만원 차감` : ''), cls(R.total)) +
     kpi('연환산 수익률', fmtP(R.cagr*100,1), `${((D.t[D.n-1]-D.t[0])/(365*DAY)).toFixed(1)}년`, cls(R.cagr)) +
     kpi('최대 낙폭', (R.mdd*100).toFixed(1)+'%', `단순보유 ${fmtP(R.bhTotal*100,1)}`, R.mdd<0?'down':'') +
     kpi('거래', R.closed+'회', R.closed ? `승률 ${Math.round(R.wins/R.closed*100)}% · 평균 ${fmtP(R.avgRet*100)}` : (R.open?'아직 매도 전':'조건 미충족')) +
@@ -606,7 +624,7 @@ function render(){
     kpi('매도선 이상', Math.round(above/okN*100)+'%', `매매 가능한 ${unit} 중`);
   const tr = R.trades.slice().sort((a,b)=>b.bi-a.bi), per = D.hourly?24:1;
   $('tradeCount').textContent = `완료 ${R.closed}건` + (R.open ? ` · 보유 중 ${R.open}건` : '');
-  $('trades').innerHTML = tr.length ? tr.slice(0,500).map(t => `<tr><td>${stamp(D.t[t.bi])}</td><td>${fmtK(t.bk)}</td><td>${t.si==null?'<span class="tag">보유 중</span>':stamp(D.t[t.si])}</td><td>${fmtK(t.sk)}</td><td>${(((t.si==null?D.n-1:t.si)-t.bi)/per).toFixed(per>1?1:0)}</td><td class="${cls(t.ret)}">${fmtP(t.ret*100)}</td><td>${t.src?'<span class="tag">테더</span>':'<span class="tag p">비트김프</span>'}</td></tr>`).join('')
+  $('trades').innerHTML = tr.length ? tr.slice(0,500).map(t => `<tr><td>${stamp(D.t[t.bi])}</td><td>${fmtK(t.bk)}</td><td>${t.si==null?'<span class="tag">보유 중</span>':stamp(D.t[t.si])}</td><td>${fmtK(t.sk)}</td><td>${(((t.si==null?D.n-1:t.si)-t.bi)/per).toFixed(per>1?1:0)}</td><td class="${cls(t.ret)}">${fmtP(t.ret*100)}</td><td>${t.loan?'<span class="tag">마통</span> ':''}${t.src?'<span class="tag">테더</span>':'<span class="tag p">비트김프</span>'}</td></tr>`).join('')
     : `<tr><td colspan="7" style="text-align:center;font-family:var(--font);color:var(--muted);padding:20px">이 조건으로는 거래가 없습니다. 매수선을 높이거나 기간을 넓혀 보세요.</td></tr>`;
   if (!u1) buildCharts(); else setChartData();
   u1.redraw();
@@ -616,7 +634,7 @@ function render(){
 }
 
 // ---- 입력 ----
-const NUMS = ['buy','sell','maDays','mbuy','msell','n','step','fee','cap','delay'];
+const NUMS = ['buy','sell','maDays','mbuy','msell','n','step','fee','cap','delay','loan','loanGap','rate'];
 $('hourChips').innerHTML = Array.from({length:24}, (_,h) => `<button type="button" data-h="${h}" aria-label="${h}시">${String(h).padStart(2,'0')}</button>`).join('');
 $('hourChips').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const h = +b.dataset.h; S.hmask[h] = !S.hmask[h]; render(); });
 $('hourChips').nextElementSibling.addEventListener('click', e => { const p = e.target.closest('button')?.dataset.h; if (!p) return;
@@ -643,9 +661,15 @@ function syncInputs(){
   $('modeHint').textContent = S.mode==='ma'
     ? `최근 ${S.maDays}일 김프 평균보다 ${S.mbuy}%p 낮으면 사고, ${S.msell}%p 높으면 팝니다. 평균이 1%면 ${(1-S.mbuy).toFixed(2)}% 매수, ${(1+S.msell).toFixed(2)}% 매도입니다.`
     : `김프가 ${S.buy}% 이하면 사고, ${S.sell}% 이상이면 팝니다.`;
+  const LOAN = S.fund==='loan';
   const lv = []; for (let j=0;j<S.n;j++) lv.push(S.mode==='ma' ? `평균−${(S.mbuy+j*S.step).toFixed(2)}` : (S.buy-j*S.step).toFixed(1)+'%');
-  $('levelsHint').textContent = S.n>1 ? `매수 칸: ${lv.join(' / ')}` : '';
-  $('step').disabled = S.n<=1;
+  $('levelsHint').textContent = LOAN ? '내 돈 + 마통에서는 분할 대신 두 칸(내 돈, 마통)으로 나눠 삽니다.' : S.n>1 ? `매수 칸: ${lv.join(' / ')}` : '';
+  $('n').disabled = LOAN; $('step').disabled = LOAN || S.n<=1;
+  $('loanBox').hidden = !LOAN; $('capLbl').textContent = LOAN ? '내 돈 (만원)' : '초기자본 (만원)';
+  const bl = S.mode==='ma' ? `평균−${S.mbuy}` : `${S.buy}%`, ll = S.mode==='ma' ? `평균−${(S.mbuy+S.loanGap).toFixed(2)}` : `${(S.buy-S.loanGap).toFixed(1)}%`;
+  $('fundHint').textContent = LOAN
+    ? `내 돈 ${S.cap.toLocaleString('ko-KR')}만원은 김프 ${bl}에서, 마통 ${S.loan.toLocaleString('ko-KR')}만원은 ${ll}에서 따로 사고 둘 다 매도선에서 팝니다. 이자(연 ${S.rate}%)는 마통으로 산 테더를 들고 있는 동안만 붙고, 수익률은 내 돈 기준입니다.`
+    : '내 돈만으로 매매합니다.';
 }
 let timer=null; const later = () => { clearTimeout(timer); timer = setTimeout(render, 150); };
 document.querySelectorAll('.seg[data-key]').forEach(seg => seg.addEventListener('click', e => {
@@ -674,7 +698,7 @@ $('heat').addEventListener('click', e => { const c = e.target.closest('.c'); if 
 
 let lastW = 0;
 new ResizeObserver(() => { const w = $('c1').clientWidth; if (u1 && w && Math.abs(w-lastW)>2){ lastW=w; u1.setSize({width:w, height:chartH()}); u2.setSize({width:w, height:Math.round(chartH()*.8)}); } }).observe($('c1'));
-const rebuild = () => { buildCharts(); buildKC(); if (R) heat(D, Object.assign({}, S, {cap:S.cap*1e4})); };
+const rebuild = () => { buildCharts(); buildKC(); if (R) heat(D, Object.assign({}, S, {cap:S.cap*1e4, loan:S.loan*1e4})); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rebuild);
 new MutationObserver(rebuild).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 
