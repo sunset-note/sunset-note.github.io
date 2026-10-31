@@ -1,0 +1,26 @@
+# 맥미니 없이 GitHub 서버에서 페이지를 갱신한다: 매일 KST 8~23시 매시 23분(시세·공모주 데이터, 캘린더 후보 cal.json)
+name: update
+on:
+  schedule:
+    - cron: '23 23,0-14 * * *'   # UTC 23시~다음날 14시 = KST 8~23시
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: update
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./src/build.sh
+      - name: commit
+        run: |
+          git config user.name "sunset-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html cal.json src/ipo_track.json src/float_cache.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -q -m "데이터 자동 갱신 $(TZ=Asia/Seoul date '+%m-%d %H:%M')"
+          git push
