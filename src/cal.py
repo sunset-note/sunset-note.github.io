@@ -63,8 +63,8 @@ for u in D["upcoming"]:
         lc, ic = 0.05 * days / 365, 0.025 * days / 365
         lines.append("마통 5%% 이자: 1억당 약 %s원 (%d일)" % ("{:,.0f}".format(1e8 * lc), days))
         lines.append("마감일 오후 경쟁률이 약 %s:1 아래면 마통 비례까지 이득, 약 %s:1 아래면 여유자금 비례 이득" % ("{:,.0f}".format(med / lc), "{:,.0f}".format(med / ic)))
-    if k == "l":
-        lines.append("마통 사용 기준: 김프 +0.5% 이상이면 써도 됨 · 0~0.5%면 환불 2일 종목 위주 · 0% 아래면 김프 -0.5% 매수용으로 비워 둠")
+    if k in ("p", "l"):   # 근거: 빗썸 2023-12~2026-10 일봉에서 김프가 매수선보다 1%p 이상 높으면 2일 안에 매수선에 닿은 날이 10% 안팎 이하
+        lines.append("돈 쓰는 기준(마감일 김프, 횡보장 기준): 마통은 +0.5% 이상, 여유자금은 +1.5% 이상일 때만 · 아니면 김프 매수용으로 남겨 둠 (텔레그램 마감일 알림에 실시간 판단)")
     lines += ["", "https://sunset-note.github.io/#ipo"]
     start = dt.date.fromisoformat(u["sub"][0]); end = dt.date.fromisoformat(u["sub"][1])
     # 대출 등급은 마통 이자를 하루 아끼려고 마감일 14~15시에 청약한다: 15~16시 일정에 14시·15시 알림
