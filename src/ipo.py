@@ -1,7 +1,7 @@
 # 38커뮤니케이션에서 공모주 청약일정·신규상장 수집 -> ipo.json
 import os, re, sys, json, math, time, html, urllib.request, datetime as dt
 
-BASE = "https://www.38.co.kr/html/fund/"
+BASE = os.environ.get("FUND_BASE", "https://www.38.co.kr/html/fund/")  # GitHub(해외 서버)에서는 38이 막혀 Cloudflare 중계(/f38/)로 받는다
 OUT = sys.argv[1] if len(sys.argv) > 1 else "ipo.json"
 KST = dt.timezone(dt.timedelta(hours=9))
 TODAY = dt.datetime.now(KST).date()  # GitHub 서버(UTC)에서도 한국 날짜로

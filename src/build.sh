@@ -4,6 +4,8 @@
 set -e
 S="$(cd "$(dirname "$0")" && pwd)"; R="$(dirname "$S")"; T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 cd "$T"
+# 38커뮤니케이션은 해외 서버(GitHub)를 막아서 Cloudflare 중계로 받는다
+[ -n "$GITHUB_ACTIONS" ] && export FUND_BASE="https://sunset-fx.ghlckd01.workers.dev/f38/"
 END=$(TZ=Asia/Seoul python3 -c "import datetime;print(datetime.date.today()-datetime.timedelta(1))")
 python3 -I "$S/fetch.py" raw.json
 python3 -I "$S/build.py" raw.json kimp.json "$END"
