@@ -23,7 +23,7 @@ def upbitlike(base, market, key="candle_date_time_utc", z="Z"):
 def binance(tz="0"):
     res={}; start=1500000000000
     while True:
-        d=get(f"https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=1000&startTime={start}&timeZone={tz}")
+        d=get(f"https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=1000&startTime={start}&timeZone={tz}")
         if not d: break
         for k in d: res[time.strftime("%Y-%m-%d",time.gmtime(k[0]/1000+int(tz)*3600))]=float(k[4])
         if len(d)<1000: break
