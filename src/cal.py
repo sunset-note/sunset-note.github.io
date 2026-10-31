@@ -1,4 +1,4 @@
-# 공모주 캘린더 후보 목록 -> cal.json (GitHub 자동 실행에서 ipo.json으로 만든다)
+# 공모주 캘린더 후보 목록(events)과 알림용 종목 요약(up) -> cal.json (GitHub 자동 실행에서 ipo.json으로 만든다)
 # 구글 Apps Script가 이 목록을 읽어, graded(균등·비례·대출)이거나 사이트에서 ★로 고른 종목만 구글 캘린더에 등록한다.
 # 사용: python3 cal.py <ipo.json> > cal.json
 # 등급 기준은 template.html의 recKind()와 같게 유지한다.
@@ -69,4 +69,8 @@ for u in D["upcoming"]:
     res.append(dict(no=str(u["no"]), ipo=u["no"], graded=k in NAME, summary="[%s] %s 청약 마감 (%s)" % (tag, u["name"] + (" ★" if mine and k in NAME else ""), "/".join(u["brokers"])),
                     startTime=u["sub"][1] + "T14:30:00", endTime=u["sub"][1] + "T16:00:00", colorId=COLOR,
                     reminders=[(end - start).days * 1440 + 380, 0], description="\n".join(lines)))
-print(json.dumps(res, ensure_ascii=False))
+# 텔레그램 공모주 알림(Cloudflare 중계 서버)용 요약: 청약·상장이 남은 종목
+KEEP = ("no", "name", "sub", "list", "price", "band", "inst", "lock", "lock0", "score", "score0", "brokers", "refund", "margin", "market")
+up = [dict({k: u.get(k) for k in KEEP}, kind=kind(u["inst"], u.get("lock")) if u.get("inst") is not None else None, spac="스팩" in u["name"])
+      for u in D["upcoming"] if u["sub"][1] >= today or (u.get("list") or "") >= today]
+print(json.dumps({"events": res, "up": up}, ensure_ascii=False))
