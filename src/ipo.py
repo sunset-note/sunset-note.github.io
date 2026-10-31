@@ -266,6 +266,10 @@ def score(u, pool):
 
 for s in up:
     s["score"] = None if "스팩" in s["name"] else score(s, SC_BASE)
+    # 청약 뒤 확약이 늘면(상장일 매물 감소) 점수도 오른다. 처음 기록한 확약으로 매긴 점수를 같이 남겨 변화를 보여 준다
+    h = [x for x in s.get("hist") or [] if x[1] is not None]
+    if s["score"] is not None and h and h[0][1] != s.get("lock"):
+        s["lock0"], s["score0"] = h[0][1], score(dict(s, lock=h[0][1]), SC_BASE)
 for x in hist:
     if x.get("inst") is not None and x["list"] >= "2023-06-26" and "스팩" not in x["name"]:
         x["score"] = score(x, [y for y in SC_BASE if y["list"] < x["list"]])

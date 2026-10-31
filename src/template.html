@@ -1424,13 +1424,15 @@ function scoreLive(u){
   const raw = 0.4 * win * 100 + 0.6 * Math.max(0, Math.min(100, 50 + 25 * Math.log2(Math.max(1 + med, 0.05))));
   return Math.max(0, Math.min(100, Math.round((raw - 40) / 55 * 100)));
 }
-function scoreTag(v){
+function scoreTag(v, u){
   if (v == null) return '';
+  const p0 = u && u.score0 != null && u.score0 !== v ? u.score0 : null;
   const b = scBand(v), s = scStat(b);
   const tip = `점수 ${v}/100 · 기관경쟁률, 의무보유확약, 상장일 유통금액(확약분 제외)이 비슷한 과거 종목(2023.6.26 이후, 스팩 제외, 개편 후 2배 가중)의 시초가 승률과 수익률로 매깁니다.`
     + (s.n ? ` 같은 ${b[0]}~${Math.min(b[1], 100) - (b[1] > 100 ? 0 : 1)}점대 상장 ${s.n}건: 시초 손실 ${s.lp.toFixed(0)}%, 시초 중앙값 ${pct(s.med)}.` : '')
+    + (p0 != null ? ` 청약 뒤 의무보유확약이 ${(+u.lock0).toFixed(2)}% → ${(+u.lock).toFixed(2)}%로 바뀌어 이전 ${p0}점에서 ${v}점이 됐습니다.` : '')
     + ' 참고용이며 결과를 보장하지 않습니다.';
-  return `<span class="sc ${b[2]}" data-tip="${esc(tip)}">${v}점</span>`;
+  return `<span class="sc ${b[2]}" data-tip="${esc(tip)}">${v}점${p0 != null ? (v > p0 ? ' ▲' : ' ▼') : ''}</span>`;
 }
 function stat(L){
   const n = L.length; if (!n) return {n};
@@ -1526,7 +1528,7 @@ function itemHTML(u){
   const bks = (u.alloc && u.alloc.length ? u.alloc : u.brokers.map(b => ({name:b}))).map(a =>
     `<span class="pill">${esc(a.name)}${a.shares ? ' ' + (a.shares/1e4).toFixed(a.shares<1e5?1:0) + '만주' : ''}${a.limit && a.limit !== '-' ? ' · 한도 ' + esc(a.limit) : ''}</span>`).join('');
   return `<details class="ir${phase(u) === 'live' ? ' now' : ''}"><summary>
-    <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<span class="dd ${sc}">${st}</span></div>
+    <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<span class="dd ${sc}">${st}</span></div>
     <div class="ir-d">청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 ${u.list ? sd(u.list) : '미정'}</div>
     <div class="ir-kv"><span><small>공모가</small><b>${px ? won(px) : esc((u.band||'–').split('~')[0]) + '~'}</b></span><span><small>기관</small><b>${u.inst != null ? won(u.inst) + ':1' : '–'}</b></span><span><small>확약</small><b>${u.inst != null ? (u.lock ?? 0).toFixed(1) + '%' : '–'}${LD(u) ? ` <small class="${LD(u) > 0 ? 'up' : 'down'}">${LD(u) > 0 ? '▲' : '▼'}${Math.abs(LD(u)).toFixed(1)}p</small>` : ''}</b></span><span><small>유통</small><b>${u.float ? u.float.pct.toFixed(0) + '%' + (lo ? ' · ' + eok(u.float.shares * lo) : '') : '–'}</b></span><span><small>주관</small><b>${esc(u.brokers.join('·'))}</b></span></div>
   </summary><div class="ir-more">
@@ -1713,6 +1715,7 @@ segUI(); renderUp(); renderDone(); renderStats(); renderGrade(); renderScore(); 
     const changed = new Set();
     for (const u of IPO.upcoming.concat(IPO.listed)) {
       const L = live[u.no]; if (!L) continue;
+      if (L.lock != null && u.lock != null && u.lock !== L.lock && u.score != null && u.score0 == null) { u.lock0 = u.lock; u.score0 = u.score; }   // 확약 변화 전 점수 보관
       for (const k of ['inst', 'lock', 'price']) if (L[k] != null && u[k] !== L[k]) { u[k] = L[k]; changed.add(u.no); }
     }
     for (const u of IPO.upcoming.concat(IPO.listed)) if (changed.has(u.no)) u.score = scoreLive(u);

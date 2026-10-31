@@ -6,7 +6,7 @@ import sys, json, datetime as dt
 
 D = json.load(open(sys.argv[1]))
 st = {"done": {}}
-today = (dt.datetime.utcnow() + dt.timedelta(hours=9)).date().isoformat()
+today = dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).date().isoformat()
 
 
 def kind(i, l):
@@ -49,7 +49,7 @@ for u in D["upcoming"]:
     who = "나" + (" + 가족(엄마·아빠·동생)" if FAMILY & set(u["brokers"]) else "만")
     px = "{:,}원".format(int(u["price"])) if u.get("price") else "희망 " + (u.get("band") or "?")
     rf = u.get("refund")
-    lines = [("추천: %s (%s)" % (NAME[k], ACT[k]) if k in NAME else "등급: %s · 내 청약(★)으로 고른 종목이라 등록" % grade) + (" · 점수 %d/100" % u["score"] if u.get("score") is not None else ""),
+    lines = [("추천: %s (%s)" % (NAME[k], ACT[k]) if k in NAME else "등급: %s · 내 청약(★)으로 고른 종목이라 등록" % grade) + (" · 점수 %d/100" % u["score"] + (" (확약 %.2f%%→%.2f%%로 늘기 전 %d점)" % (u["lock0"], u.get("lock") or 0, u["score0"]) if u.get("score0") is not None and u["score0"] != u["score"] else "") if u.get("score") is not None else ""),
              "청약 %s~%s 16:00 · %s · 청약 가능: %s · 공모가 %s · 증거금 %d%%" % (u["sub"][0][5:].replace("-", "/"), u["sub"][1][5:].replace("-", "/"), "/".join(u["brokers"]), who, px, u.get("margin") or 50),
              "기관경쟁률 %s:1 · 의무보유확약 %.2f%% · 상장 %s%s" % ("{:,.0f}".format(u["inst"]) if u.get("inst") is not None else "–", lk, (u.get("list") or "미정")[5:].replace("-", "/"), " · 환불 " + rf[5:].replace("-", "/") if rf else ""),
              ""]
