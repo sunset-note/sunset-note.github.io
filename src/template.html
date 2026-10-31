@@ -1775,8 +1775,8 @@ function renderRes(){
   resForm();
   const R = RES.rows, done_ = R.filter(r => resPL(r) != null);
   const tot = done_.reduce((a, r) => a + resPL(r), 0), got = R.reduce((a, r) => { const u = BYNO.get(r.no); return a + (u && u.price ? u.price * r.qty : 0); }, 0);
-  const dep = done_.reduce((a, r) => a + r.dep, 0), fee = R.reduce((a, r) => a + (r.fee || 0), 0);
-  $('rsKpis').innerHTML = kpi('확정 손익', (tot >= 0 ? '+' : '') + won(tot) + '원', `수수료 ${won(fee)}원 포함`, cls(tot)) +
+  const dep = done_.reduce((a, r) => a + r.dep, 0), fee = done_.reduce((a, r) => a + (r.fee || 0), 0);
+  $('rsKpis').innerHTML = kpi('확정 손익', done_.length ? (tot >= 0 ? '+' : '') + won(tot) + '원' : '–', done_.length ? `수수료 ${won(fee)}원 포함 · ${done_.length}계좌` : '상장 후 시초가로 계산', cls(tot)) +
     kpi('청약', new Set(R.map(r => r.no)).size + '종목', `${R.length}계좌`) +
     kpi('배정 금액', won(got) + '원', `${R.reduce((a, r) => a + r.qty, 0)}주`) +
     kpi('증거금 1억당 수익', dep ? (tot >= 0 ? '+' : '') + won(tot / dep * 1e8) + '원' : '–', '매도까지 끝난 것만');
@@ -1784,7 +1784,7 @@ function renderRes(){
     .sort((a, b) => ((b.u && b.u.sub[1]) || '').localeCompare((a.u && a.u.sub[1]) || ''));
   $('rsList').innerHTML = !G.length ? '<p class="hint" style="margin-top:10px">아직 기록이 없습니다. 청약 결과가 나오면(보통 마감 다음 날) 위에서 사람마다 한 줄씩 넣어 주세요.</p>' : G.map(({no, u, rows}) => {
     const pl = rows.map(resPL), sum = pl.every(v => v != null) ? pl.reduce((a, b) => a + b, 0) : null;
-    const comp = u && u.comp, depT = rows.reduce((a, r) => a + r.dep, 0), qT = rows.reduce((a, r) => a + r.qty, 0);
+    const comp = u && u.comp != null ? parseFloat(String(u.comp).replace(/,/g, '')) || null : null, depT = rows.reduce((a, r) => a + r.dep, 0), qT = rows.reduce((a, r) => a + r.qty, 0);
     const exp = comp && u.price ? depT / comp / u.price : null;   // 비례 예상 주수(균등 몫 제외): 증거금 ÷ 경쟁률 ÷ 공모가
     return `<div class="rs"><div class="rs-h"><b>${esc(u ? u.name : '#' + no)}</b><span class="m">공모가 ${u && u.price ? won(u.price) : '–'} · ${u && u.open ? '시초가 <b class="' + cls(u.open - u.price) + '">' + won(u.open) + '</b> (' + pct((u.open / u.price - 1) * 100) + ')' : '상장 ' + (u && u.list ? md(u.list) : '미정')}${comp ? ' · 경쟁률 ' + won(comp) + ':1' : ''}</span>
       <span class="tot ${cls(sum)}">${sum == null ? '상장 대기' : (sum >= 0 ? '+' : '') + won(sum) + '원'}</span></div>` +
