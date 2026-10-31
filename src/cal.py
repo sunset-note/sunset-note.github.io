@@ -1,5 +1,5 @@
 # 공모주 캘린더 후보 목록(events)과 알림용 종목 요약(up) -> cal.json (GitHub 자동 실행에서 ipo.json으로 만든다)
-# 구글 Apps Script가 이 목록을 읽어, graded(균등·비례·대출)이거나 사이트에서 ★로 고른 종목만 구글 캘린더에 등록한다.
+# 구글 Apps Script가 이 목록을 읽어, graded(비례·대출)이거나 사이트에서 ★로 고른 종목만 구글 캘린더에 등록한다.
 # 사용: python3 cal.py <ipo.json> > cal.json
 # 등급 기준은 template.html의 recKind()와 같게 유지한다.
 # cal.json은 공개 파일이라 가족 이름은 넣지 않고 '가족'으로만 쓴다(누구 핸드폰이 필요한지는 텔레그램 알림이 연동 저장소에서 읽어 알려 준다).
@@ -14,8 +14,8 @@ def kind(i, l):
     l = l or 0
     if i < 100 or (l < 1 and (i < 500 or i >= 1000)) or (i < 500 and l < 5): return "x"
     if i >= 500 and l >= 15: return "l"
-    if (i >= 500 and l >= 5) or (i >= 1000 and l >= 1): return "p"
-    return "e" if (i >= 500 and l >= 2) or (i < 500 and l >= 25) else "c"
+    if (i >= 500 and l >= 2) or (i >= 1000 and l >= 1) or (i < 500 and l >= 25): return "p"   # 예전 균등은 2026-11-01부터 비례로 합침
+    return "c"
 
 
 FAMILY = {"한투", "미래", "NH", "대신"}   # 가족 계좌가 있는 증권사
