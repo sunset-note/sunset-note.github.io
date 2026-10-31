@@ -67,9 +67,12 @@ for u in D["upcoming"]:
         lines.append("마통 사용 기준: 김프 +0.5% 이상이면 써도 됨 · 0~0.5%면 환불 2일 종목 위주 · 0% 아래면 김프 -0.5% 매수용으로 비워 둠")
     lines += ["", "https://sunset-note.github.io/#ipo"]
     start = dt.date.fromisoformat(u["sub"][0]); end = dt.date.fromisoformat(u["sub"][1])
-    res.append(dict(no=str(u["no"]), ipo=u["no"], graded=k in NAME, summary="[%s] %s 청약 마감 (%s)" % (tag, u["name"] + (" ★" if mine and k in NAME else ""), "/".join(u["brokers"])),
-                    startTime=u["sub"][1] + "T14:30:00", endTime=u["sub"][1] + "T16:00:00", colorId=COLOR,
-                    reminders=[(end - start).days * 1440 + 380, 0], description="\n".join(lines)))
+    # 대출 등급은 마통 이자를 하루 아끼려고 마감일 14~15시에 청약한다: 15~16시 일정에 14시·15시 알림
+    loan = k == "l"
+    res.append(dict(no=str(u["no"]), ipo=u["no"], graded=k in NAME,
+                    summary="[%s] %s %s (%s)" % (tag, u["name"] + (" ★" if mine and k in NAME else ""), "마통 청약 14~15시" if loan else "청약 마감", "/".join(u["brokers"])),
+                    startTime=u["sub"][1] + ("T15:00:00" if loan else "T14:30:00"), endTime=u["sub"][1] + "T16:00:00", colorId=COLOR,
+                    reminders=[60, 0] if loan else [(end - start).days * 1440 + 380, 0], description="\n".join(lines)))
 # 텔레그램 공모주 알림(Cloudflare 중계 서버)용 요약: 청약·상장이 남은 종목
 KEEP = ("no", "name", "sub", "list", "price", "band", "inst", "lock", "lock0", "score", "score0", "brokers", "refund", "margin", "market")
 up = [dict({k: u.get(k) for k in KEEP}, kind=kind(u["inst"], u.get("lock")) if u.get("inst") is not None else None, spac="스팩" in u["name"])
