@@ -2,6 +2,7 @@
 # 구글 Apps Script가 이 목록을 읽어, graded(균등·비례·대출)이거나 사이트에서 ★로 고른 종목만 구글 캘린더에 등록한다.
 # 사용: python3 cal.py <ipo.json> > cal.json
 # 등급 기준은 template.html의 recKind()와 같게 유지한다.
+# cal.json은 공개 파일이라 가족 이름·증권사 계좌 정보는 넣지 않는다(누가 청약할지는 텔레그램 알림이 연동 저장소에서 읽어 알려 준다).
 import sys, json, datetime as dt
 
 D = json.load(open(sys.argv[1]))
@@ -20,7 +21,6 @@ def kind(i, l):
 NAME = {"l": "대출", "p": "비례", "e": "균등"}
 COLOR = "2"  # 공모주 일정은 전부 연두(Sage)
 ACT = {"l": "마통까지 써서 비례", "p": "여유자금으로 비례", "e": "균등 최소 수량"}
-FAMILY = {"한투", "미래", "NH", "대신"}
 INST_B, LOCK_B = [0, 100, 500, 1000, 1e12], [0, 1, 5, 15, 1e12]
 bk = lambda B, v: next(j for j in range(4) if B[j] <= v < B[j + 1])
 H = [x for x in D["listed"] if x["list"] >= "2023-06-26" and "스팩" not in x["name"] and x.get("inst") is not None and x.get("price") and x.get("open")]
@@ -46,11 +46,10 @@ for u in D["upcoming"]:
     G = sorted(ro(x) for x in H if kind(x["inst"], x.get("lock")) == k) if k else []
     B = sorted(ro(x) for x in H if bk(INST_B, x["inst"]) == bk(INST_B, u["inst"]) and bk(LOCK_B, x.get("lock") or 0) == bk(LOCK_B, lk)) if k else []
     med = B[len(B) // 2] if B else None
-    who = "나" + (" + 가족(엄마·아빠·동생)" if FAMILY & set(u["brokers"]) else "만")
     px = "{:,}원".format(int(u["price"])) if u.get("price") else "희망 " + (u.get("band") or "?")
     rf = u.get("refund")
     lines = [("추천: %s (%s)" % (NAME[k], ACT[k]) if k in NAME else "등급: %s · 내 청약(★)으로 고른 종목이라 등록" % grade) + (" · 점수 %d/100" % u["score"] + (" (확약 %.2f%%→%.2f%%로 늘기 전 %d점)" % (u["lock0"], u.get("lock") or 0, u["score0"]) if u.get("score0") is not None and u["score0"] != u["score"] else "") if u.get("score") is not None else ""),
-             "청약 %s~%s 16:00 · %s · 청약 가능: %s · 공모가 %s · 증거금 %d%%" % (u["sub"][0][5:].replace("-", "/"), u["sub"][1][5:].replace("-", "/"), "/".join(u["brokers"]), who, px, u.get("margin") or 50),
+             "청약 %s~%s 16:00 · %s · 공모가 %s · 증거금 %d%%" % (u["sub"][0][5:].replace("-", "/"), u["sub"][1][5:].replace("-", "/"), "/".join(u["brokers"]), px, u.get("margin") or 50),
              "기관경쟁률 %s:1 · 의무보유확약 %.2f%% · 상장 %s%s" % ("{:,.0f}".format(u["inst"]) if u.get("inst") is not None else "–", lk, (u.get("list") or "미정")[5:].replace("-", "/"), " · 환불 " + rf[5:].replace("-", "/") if rf else ""),
              ""]
     if G:
