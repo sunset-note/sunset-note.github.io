@@ -192,6 +192,8 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .tip{position:fixed;z-index:999;max-width:340px;background:#1d2230;color:#f3f4f7;font:14px/1.55 var(--font);padding:9px 11px;border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.25);white-space:pre-line;pointer-events:none}
 .sc{cursor:help;font:700 12.5px var(--font);border-radius:6px;padding:1px 6px;flex:none;border:1.5px solid currentColor;background:var(--card, transparent)}
 .sc-a{color:#1f9d6b}.sc-b{color:#3b82c4}.sc-c{color:#c07a12}.sc-d{color:#d0455b}
+.yt{font:700 12.5px var(--font);border-radius:6px;padding:1px 6px;flex:none;border:1.5px dashed currentColor;text-decoration:none}
+.yt-A{color:#1f9d6b}.yt-B{color:#3b82c4}.yt-C{color:#c07a12}.yt-D{color:#d0455b}
 .rec{cursor:help;font:700 12.5px var(--font);border-radius:6px;padding:2px 7px;flex:none;color:#fff}
 .rec-x{background:#9a93a0} .rec-e{background:#1f9d6b} .rec-c{background:#d08a1a} .rec-p{background:var(--down)} .rec-l{background:#e0559c} .rec-w{background:var(--soft);color:var(--muted)}
 .ir-d{font:14px var(--mono);color:var(--muted)}
@@ -1581,7 +1583,7 @@ function itemHTML(u){
     w: `⏳ 수요예측 결과가 나오면 등급을 매깁니다${u.fc ? ` <small>· ${md(u.fc[0])}~${md(u.fc[1])}</small>` : ''}`}[R.k] || '';
   const ph = phase(u), dl = ph === 'wait' ? `청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 <b>${u.list ? sd(u.list) : '미정'}</b>` : `청약 <b>${sd(u.sub[0])}~${sd(u.sub[1])}</b> · 상장 ${u.list ? sd(u.list) : '미정'}`;
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}"><summary>
-    <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<span class="dd ${sc}">${st}</span></div>
+    <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}${u.yt ? `<a class="yt yt-${u.yt.g[0]}" href="https://youtu.be/${esc(u.yt.v)}" target="_blank" rel="noopener" title="공모주린이 유튜브 종합점수 · 누르면 영상">린이 ${esc(u.yt.g)}</a>` : ''}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<span class="dd ${sc}">${st}</span></div>
     <div class="ir-d">${dl}</div>
     ${ACT ? `<div class="ir-act">${ACT}</div>` : ''}
     <div class="ir-kv"><span><small>공모가</small><b>${px ? won(px) : esc((u.band||'–').split('~')[0]) + '~'}</b></span>${u.inst != null ? `<span><small>기관</small><b>${won(u.inst) + ':1'}</b></span><span><small>확약</small><b>${(u.lock ?? 0).toFixed(1) + '%'}${LD(u) ? ` <small class="${LD(u) > 0 ? 'up' : 'down'}">${LD(u) > 0 ? '▲' : '▼'}${Math.abs(LD(u)).toFixed(1)}p</small>` : ''}</b></span>` : `<span class="wide"><small>기관 · 확약</small><b>수요예측 전</b></span>`}<span class="fl"><small>유통</small><b>${u.float ? u.float.pct.toFixed(0) + '%' + (lo ? ' · ' + eok(u.float.shares * lo) : '') : '–'}</b></span><span><small>주관</small><b>${esc(u.brokers.join('·'))}</b></span></div>

@@ -12,6 +12,9 @@ python3 -I "$S/build.py" raw.json kimp.json "$END"
 python3 -I "$S/fetch_h.py" rawh.json
 python3 -I "$S/build_h.py" rawh.json kimp.json all.json
 python3 -I "$S/ipo.py" ipo.json
+# 공모주린이 유튜브 종합점수(A+~D): 자막 라이브러리를 임시 폴더에 받아 쓴다. 실패해도 빌드는 계속
+python3 -m pip install -q --target "$T/py" youtube-transcript-api >/dev/null 2>&1 || true
+YT_LIB="$T/py" python3 -I "$S/yt.py" ipo.json || echo "yt: 건너뜀"
 # 미국 ETF 백테스터용 2004년 이전 원/달러(FRED DEXKOUS). 실패하면 빈 배열
 curl -s -m 60 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXKOUS" > fred.csv || true
 python3 -I -c "
