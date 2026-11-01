@@ -532,7 +532,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     </section>
     <section class="card" id="ytCard" hidden>
       <div class="head"><h2>공모주린이 등급별 성적</h2><p class="hint">공모주린이 유튜브 영상 끝의 종합점수를 맥미니가 2시간마다 자동으로 모으고, 상장하면 시초가로 등급별 결과를 쌓습니다. 이 기기와 연동한 기기에만 보입니다.</p></div>
-      <div class="tablewrap"><table><thead><tr><th style="text-align:left">공모주린이 등급</th><th>기록</th><th>상장 끝남</th><th>시초 손실</th><th>시초 중앙값</th><th>시초 평균</th><th>1주 평균 손익</th></tr></thead><tbody id="ytGrade"></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th style="text-align:left">공모주린이 등급</th><th>기록</th><th>상장 끝남</th><th>시초 수익률 범위</th><th>보통(중앙값)</th><th>손실</th><th>1주 평균 손익</th></tr></thead><tbody id="ytGrade"></tbody></table></div>
       <p class="hint" style="margin-top:8px" id="ytNote"></p>
       <div class="tablewrap" style="margin-top:10px;max-height:420px"><table><thead><tr><th style="text-align:left">종목</th><th>공모주린이</th><th>이 사이트</th><th>상장일</th><th>시초 수익률</th></tr></thead><tbody id="ytRows"></tbody></table></div>
     </section>
@@ -1850,13 +1850,16 @@ function renderYt(){
   $('ytCard').hidden = !OWN() || !L.length; if ($('ytCard').hidden) return;
   const D = L.filter(u => u.open && u.price), ret = u => (u.open / u.price - 1) * 100;
   const st = A => { const v = A.map(ret).sort((a, b) => a - b), n = v.length; return n ? {n, loss: v.filter(x => x < 0).length, med: v[n >> 1], avg: v.reduce((a, b) => a + b, 0) / n, won: A.reduce((a, u) => a + u.open - u.price, 0) / n} : null; };
-  $('ytGrade').innerHTML = ['A', 'B', 'C', 'D'].map(c => { const A = L.filter(u => YT[u.no].g[0] === c), S = st(D.filter(u => YT[u.no].g[0] === c));
-    return `<tr><td style="text-align:left"><span class="yt yt-${c}">${c}+ · ${c} · ${c}-</span></td><td>${A.length}</td><td>${S ? S.n : 0}</td><td>${S ? S.loss + '건 (' + (S.loss / S.n * 100).toFixed(0) + '%)' : '–'}</td>
-      <td class="${S ? cls(S.med) : ''}">${S ? pct(S.med) : '–'}</td><td class="${S ? cls(S.avg) : ''}">${S ? pct(S.avg) : '–'}</td><td class="${S ? cls(S.won) : ''}">${S ? (S.won >= 0 ? '+' : '') + won(S.won) + '원' : '–'}</td></tr>`; }).join('');
+  // 등급마다 한 줄: 상장 끝난 종목의 시초 수익률 범위(4건 이상이면 가운데 50%, 그 전에는 최저~최고)와 중앙값. 기록이 있는 등급만 보여 준다
+  const rng = v => { const n = v.length; if (!n) return '–'; const lo = n >= 4 ? v[Math.floor(n / 4)] : v[0], hi = n >= 4 ? v[Math.ceil(n * 3 / 4) - 1] : v[n - 1];
+    return n === 1 ? pct(lo) : `${pct(lo)} ~ ${pct(hi)}${n >= 4 ? '' : ' <small>(최저~최고)</small>'}`; };
+  $('ytGrade').innerHTML = YG.filter(g => L.some(u => YT[u.no].g === g)).map(g => { const A = L.filter(u => YT[u.no].g === g), B = D.filter(u => YT[u.no].g === g), S = st(B), v = B.map(ret).sort((a, b) => a - b);
+    return `<tr><td style="text-align:left"><span class="yt yt-${g[0]}">공모주린이 ${g}</span></td><td>${A.length}</td><td>${B.length}</td><td>${B.length ? rng(v) : '상장 대기'}</td>
+      <td class="${S ? cls(S.med) : ''}">${S ? pct(S.med) : '–'}</td><td>${S ? S.loss + '/' + S.n : '–'}</td><td class="${S ? cls(S.won) : ''}">${S ? (S.won >= 0 ? '+' : '') + won(S.won) + '원' : '–'}</td></tr>`; }).join('');
   // 참고: 같은 종목들에서 등급(또는 이 사이트 점수) 순서와 시초 수익 순서가 얼마나 같았는지
   const DS = D.filter(u => u.score != null), f = v => v == null ? '–' : (v >= 0 ? '+' : '') + v.toFixed(2);
   const sy = DS.length >= 3 ? spear(DS.map(u => -YG.indexOf(YT[u.no].g)), DS.map(ret)) : null, so = DS.length >= 3 ? spear(DS.map(u => u.score), DS.map(ret)) : null;
-  $('ytNote').innerHTML = `시초 중앙값은 '보통 이 정도'(대박 몇 건에 덜 흔들림), 평균은 대박까지 포함한 값, 1주 평균 손익은 균등 1주를 받았을 때 시초가에 판 금액입니다. ` +
+  $('ytNote').innerHTML = `공모주린이는 등급별 기대 수익률을 따로 밝히지 않아서, 그 등급을 받은 종목들이 실제로 시초가에 얼마였는지로 범위를 채웁니다. 범위는 4건 이상이면 가운데 절반(위아래 25%씩 뺀 구간), 그 전에는 최저~최고입니다. 1주 평균 손익은 균등 1주를 시초가에 팔았을 때입니다. ` +
     (D.length < 20 ? `상장 끝난 종목이 ${D.length}건이라 아직은 우연일 수 있습니다(20건 넘으면 의미가 생깁니다). ` : '') +
     (DS.length >= 3 ? `참고로 같은 ${DS.length}개 종목에서 등급 순서와 시초 수익 순서의 일치도(1에 가까울수록 같음)는 공모주린이 <b>${f(sy)}</b>, 이 사이트 점수 <b>${f(so)}</b>입니다.` : '');
   $('ytRows').innerHTML = L.map(u => { const R = u.inst != null ? REC[recKind(u.inst, u.lock ?? 0)] : null, v = u.open && u.price ? ret(u) : null;
