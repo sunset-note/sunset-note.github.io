@@ -175,12 +175,13 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .day-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .day-list .it{display:flex;gap:8px;align-items:center;font-size:16.5px;padding:3px 0}
 .day-list .k{font:700 13.5px var(--font);color:#fff;border-radius:5px;padding:2px 7px;flex:none}
-.grp-h{font:700 14px var(--font);color:var(--muted);margin:14px 0 6px;display:flex;gap:6px;align-items:center}
+.grp-h{font:800 17.5px var(--font);color:var(--ink);margin:22px 0 10px;display:flex;gap:8px;align-items:center;letter-spacing:-.02em}
 .grp-h:first-child{margin-top:0}
-.grp-h b{font:500 13px var(--mono);background:var(--soft);border-radius:999px;padding:0 7px;color:var(--ink)}
-.ir{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:8px;overflow:hidden}
+.grp-h b{font:700 13px var(--font);background:var(--soft);border-radius:999px;padding:1px 9px;color:var(--muted)}
+.more-btn{display:block;width:100%;margin:2px 0 6px;padding:8px;border:0;background:none;color:var(--muted);font:600 14px var(--font);cursor:pointer}
+.ir{border:1px solid color-mix(in srgb,var(--line) 70%,transparent);border-radius:14px;background:var(--panel);margin-bottom:10px;overflow:hidden;box-shadow:0 2px 10px rgba(80,60,90,.05)}
 .ir.now{border-color:#e0559c;box-shadow:inset 4px 0 0 #e0559c}
-.ir summary{list-style:none;cursor:pointer;padding:11px 12px;display:flex;flex-direction:column;gap:5px}
+.ir summary{list-style:none;cursor:pointer;padding:14px 14px 13px;display:flex;flex-direction:column;gap:7px}
 .ir summary::-webkit-details-marker{display:none}
 .ir-top{display:flex;align-items:center;gap:7px;min-width:0}
 .ir-top b{font-size:16.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -195,7 +196,11 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .who-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--muted);margin-bottom:10px}
 .who-legend .who{margin-left:0;vertical-align:-2px;margin-right:5px}
 .ir-top .who+.dd{margin-left:8px}
-.ir-top .dd{margin-left:auto;font:600 13px var(--font);flex:none}
+.ir-top .brk{display:none}
+.ir-top .dd{margin-left:auto;font:700 13px var(--font);flex:none;padding:3px 9px;border-radius:7px;background:var(--soft);color:var(--muted)}
+.ir-top .dd.dd-s{background:color-mix(in srgb,#f0a06a 22%,transparent);color:#d9752f}
+.ir-top .dd.dd-l{background:color-mix(in srgb,#7aaee0 24%,transparent);color:#3b7fc0}
+.ir-top .dd.dd-now{background:color-mix(in srgb,#f08a9a 26%,transparent);color:#d0457e}
 .tip{position:fixed;z-index:999;max-width:340px;background:#1d2230;color:#f3f4f7;font:14px/1.55 var(--font);padding:9px 11px;border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.25);white-space:pre-line;pointer-events:none}
 .sc{cursor:help;font:700 12.5px var(--font);border-radius:6px;padding:1px 6px;flex:none;border:1.5px solid currentColor;background:var(--card, transparent)}
 .sc-a{color:#1f9d6b}.sc-b{color:#3b82c4}.sc-c{color:#c07a12}.sc-d{color:#d0455b}
@@ -237,7 +242,9 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .ir-kv b{font:600 15px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:640px){
 .ir-top{flex-wrap:wrap;row-gap:5px}
-.ir-top b{order:-1;flex:1 0 100%;white-space:normal;font-size:17.5px}
+.ir-top b{order:-3;flex:1 1 0;min-width:0;white-space:normal;font-size:17.5px}
+.ir-top .dd{order:-2;margin-left:8px!important}
+.ir-top .brk{display:block;order:-1;flex-basis:100%;height:0}
 .ir-kv{grid-template-columns:repeat(3,minmax(0,1fr))}
 .ir-kv span.fl{grid-column:span 2}
 .wk{--bh:23px}
@@ -1612,7 +1619,7 @@ function itemHTML(u){
     w: `⏳ 수요예측 결과가 나오면 등급을 매깁니다${u.fc ? ` <small>· ${md(u.fc[0])}~${md(u.fc[1])}</small>` : ''}`}[R.k] || '';
   const ph = phase(u), dl = ph === 'wait' ? `청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 <b>${u.list ? sd(u.list) : '미정'}</b>` : `청약 <b>${sd(u.sub[0])}~${sd(u.sub[1])}</b> · 상장 ${u.list ? sd(u.list) : '미정'}`;
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}" data-no="${u.no}"><summary>
-    <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}${ytTag(u.no)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<span class="dd ${sc}">${st}</span></div>
+    <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}${ytTag(u.no)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<i class="brk"></i><span class="dd ${/중|마감일|오늘/.test(st) ? 'dd-now' : st.startsWith('청약') ? 'dd-s' : st.startsWith('상장') ? 'dd-l' : ''}">${st}</span></div>
     <div class="ir-d">${dl}</div>
     ${ACT ? `<div class="ir-act">${ACT}</div>` : ''}
     <div class="ir-kv"><span><small>공모가</small><b>${px ? won(px) : esc((u.band||'–').split('~')[0]) + '~'}</b></span>${u.inst != null ? `<span><small>기관</small><b>${won(u.inst) + ':1'}</b></span><span><small>확약</small><b>${(u.lock ?? 0).toFixed(1) + '%'}${LD(u) ? ` <small class="${LD(u) > 0 ? 'up' : 'down'}">${LD(u) > 0 ? '▲' : '▼'}${Math.abs(LD(u)).toFixed(1)}p</small>` : ''}</b></span>` : `<span class="wide"><small>기관 · 확약</small><b>수요예측 전</b></span>`}<span class="fl"><small>유통</small><b>${u.float ? u.float.pct.toFixed(0) + '%' + (lo ? ' · ' + eok(u.float.shares * lo) : '') : '–'}</b></span><span><small>주관</small><b>${esc(u.brokers.join('·'))}</b></span></div>
@@ -1628,16 +1635,18 @@ function itemHTML(u){
 }
 function renderUp(){
   const L = upcoming.filter(u => ACC.spacUp === '1' || !isSpac(u.name));
-  const G = [['청약 중', L.filter(u => phase(u) === 'live')], ['청약 예정', L.filter(u => phase(u) === 'pre')], ['상장 대기', L.filter(u => phase(u) === 'wait').sort((a, b) => (a.list || '9').localeCompare(b.list || '9'))]];
+  const G = [['청약 중', L.filter(u => phase(u) === 'live')], ['다음 청약', L.filter(u => phase(u) === 'pre')], ['상장 예정', L.filter(u => phase(u) === 'wait').sort((a, b) => (a.list || '9').localeCompare(b.list || '9'))]];
   const WG = whoGroups();
   const legend = WG.length ? `<div class="who-legend">${WG.map(g => `<span><span class="who"><i class="on" style="--c:${g.c}"></i></span>${esc(g.names.join('·'))}</span>`).join('')}<span>· 색이 채워지면 청약 가능, 빈 원은 계좌 없음</span></div>` : '';
-  $('ipoUp').innerHTML = legend + (L.length ? G.filter(g => g[1].length).map(([h, A]) => `<div class="grp-h">${h} <b>${A.length}</b></div>${A.map(itemHTML).join('')}`).join('') : '<p class="hint">예정된 청약이 없습니다.</p>');
+  $('ipoUp').innerHTML = legend + (L.length ? G.filter(g => g[1].length).map(([h, A]) => { const fold = h === '다음 청약' && !upMore && A.length > UP_N;   // 다음 청약은 처음 몇 개만, 나머지는 더보기
+    return `<div class="grp-h">${h} <b>${A.length}</b></div>${(fold ? A.slice(0, UP_N) : A).map(itemHTML).join('')}${fold ? `<button type="button" class="more-btn" data-more>더보기 ${A.length - UP_N}건 ⌄</button>` : h === '다음 청약' && A.length > UP_N ? '<button type="button" class="more-btn" data-more>접기 ⌃</button>' : ''}`; }).join('') : '<p class="hint">예정된 청약이 없습니다.</p>');
   renderCal();
 }
 
 // ---- 캘린더 ----
 const EVK = {f:['수요예측','ev-f'], s:['청약','ev-s'], r:['환불','ev-r'], l:['상장','ev-l']};
 let calM = T.slice(0, 7), calSel = T;
+let upMore = false; const UP_N = 4;
 function events(){
   const E = {}, add = (d, k, u) => { if (d) (E[d] || (E[d] = [])).push({k, u}); };
   const src = IPO.upcoming.concat(IPO.listed.filter(l => !IPO.upcoming.some(u => u.no === l.no)));
@@ -1686,6 +1695,7 @@ function renderCal(){
 $('ipoCal').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (!b) return; calSel = b.dataset.d; if (calSel.slice(0, 7) !== calM) calM = calSel.slice(0, 7); renderCal(); });
 const shiftM = n => { const [y, m] = calM.split('-').map(Number), d = new Date(Date.UTC(y, m - 1 + n, 1)); calM = d.toISOString().slice(0, 7); renderCal(); };
 $('ipoUp').addEventListener('click', e => {
+  if (e.target.closest('[data-more]')) { upMore = !upMore; renderUp(); return; }
   const b = e.target.closest('[data-mine]'); if (!b) return;
   e.preventDefault(); e.stopPropagation();
   const no = +b.dataset.mine, M = ACC.mine = (ACC.mine || []).filter(x => x !== no);
