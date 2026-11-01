@@ -218,8 +218,19 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .ir.g-x,.ir.g-c{opacity:.78}
 .ir.g-x .ir-top b,.ir.g-c .ir-top b{font-weight:500;color:var(--muted)}
 .ir.g-x .ir-s,.ir.g-c .ir-s{display:none}
-.ir-act{font:600 14.5px/1.45 var(--font);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
-.ir-act small{font-weight:400;color:var(--muted);font-size:13px}
+.ir-act{font:600 15px/1.45 var(--font);color:var(--ink);background:color-mix(in srgb,var(--soft) 55%,transparent);border-radius:10px;padding:10px 12px}
+.ir-act small{display:block;font-weight:400;color:var(--muted);font-size:13.5px;margin-top:3px}
+.kvl{margin:2px 0 0;display:flex;flex-direction:column}
+.kvl div{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.kvl div:last-child{border-bottom:0}
+.kvl dt{color:var(--muted);font-size:14px;flex:none}
+.kvl dd{margin:0;text-align:right;font-size:14.5px;font-weight:600;color:var(--ink)}
+.kvl dd small{font-weight:400;color:var(--muted)}
+.ir .ir-why>summary{display:block;cursor:pointer;color:var(--muted);font-size:13.5px;list-style:none;padding:4px 2px}
+.ir .ir-why>summary::-webkit-details-marker{display:none}
+.ir .ir-why>summary::after{content:' ⌄'}
+.ir .ir-why[open]>summary::after{content:' ⌃'}
+.ir-why .why{margin:6px 0;font-size:13.5px}
 .ir-d b{color:var(--ink);font-weight:600}
 .ir-kv span.wide{grid-column:span 2;justify-content:center}
 .rs{border:1px solid var(--line);border-radius:12px;margin-top:10px;overflow:hidden}
@@ -256,7 +267,7 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .bar{font-size:12.5px;gap:3px;padding:0 3px 0 2px;margin:0 1px;border-radius:6px;letter-spacing:-.06em}
 .bar i{width:17px;height:17px;font-size:10.5px;line-height:17px}
 }
-.ir-more{border-top:1px dashed var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:7px;font-size:14px}
+.ir-more{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent);padding:12px 14px 10px;display:flex;flex-direction:column;gap:8px;font-size:14px}
 .ir-more .why{background:var(--soft);border-radius:8px;padding:8px 10px;line-height:1.55}
 .ir-more .m{font:13.5px var(--mono);color:var(--muted)}
 .ir-more .m em{font-style:normal;color:var(--ink)}
@@ -1619,7 +1630,7 @@ function itemHTML(u){
   const bks = (u.alloc && u.alloc.length ? u.alloc : u.brokers.map(b => ({name:b}))).map(a =>
     `<span class="pill">${esc(a.name)}${a.shares ? ' ' + (a.shares/1e4).toFixed(a.shares<1e5?1:0) + '만주' : ''}${a.limit && a.limit !== '-' ? ' · 한도 ' + esc(a.limit) : ''}</span>`).join('');
   // 등급별 할 일(2023-07~2026-10 데이터로 정한 김프 기준 포함). 패스는 카드를 흐리고 작게 보여 눈에 덜 띄게 한다
-  const ACT = {l: `👉 마감일 ${sd(u.sub[1])} 14~15시에 비례 <small>· 김프 +1.5% 이상이면 여유자금+마통, +0.5~1.5%면 마통만, 그 아래면 균등 최소</small>`, p: `👉 여유자금으로 비례 <small>· 마감일 김프 +1.5% 이상일 때만, 아니면 균등 최소</small>`,
+  const ACT = {l: `👉 마감일 ${sd(u.sub[1])} 14~15시에 비례 <small>김프 +1.5% 이상 → 여유자금+마통 · +0.5% 이상 → 마통만 · 그 아래 → 균등 최소</small>`, p: `👉 여유자금으로 비례 <small>마감일 김프 +1.5% 이상일 때만 · 아니면 균등 최소</small>`,
     w: `⏳ 수요예측 결과가 나오면 등급을 매깁니다${u.fc ? ` <small>· ${md(u.fc[0])}~${md(u.fc[1])}</small>` : ''}`}[R.k] || '';
   const ph = phase(u), dl = ph === 'wait' ? `청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 <b>${u.list ? sd(u.list) : '미정'}</b>` : `청약 <b>${sd(u.sub[0])}~${sd(u.sub[1])}</b> · 상장 ${u.list ? sd(u.list) : '미정'}`;
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}" data-no="${u.no}"><summary>
@@ -1628,14 +1639,20 @@ function itemHTML(u){
     <div class="ir-s">${px ? `공모가 <b>${won(px)}원</b>` : `밴드 <b>${esc(u.band || '–')}</b>`}${u.inst != null ? ` · 기관 <b>${won(u.inst)}:1</b> · 확약 <b>${(u.lock ?? 0).toFixed(1)}%</b>` : ' · 수요예측 전'}</div>
   </summary><div class="ir-more">
     ${ACT ? `<div class="ir-act">${ACT}</div>` : ''}
-    <div class="ir-kv"><span><small>공모가</small><b>${px ? won(px) : esc((u.band||'–').split('~')[0]) + '~'}</b></span>${u.inst != null ? `<span><small>기관</small><b>${won(u.inst) + ':1'}</b></span><span><small>확약</small><b>${(u.lock ?? 0).toFixed(1) + '%'}${LD(u) ? ` <small class="${LD(u) > 0 ? 'up' : 'down'}">${LD(u) > 0 ? '▲' : '▼'}${Math.abs(LD(u)).toFixed(1)}p</small>` : ''}</b></span>` : `<span class="wide"><small>기관 · 확약</small><b>수요예측 전</b></span>`}<span class="fl"><small>유통</small><b>${u.float ? u.float.pct.toFixed(0) + '%' + (lo ? ' · ' + eok(u.float.shares * lo) : '') : '–'}</b></span><span><small>주관</small><b>${esc(u.brokers.join('·'))}</b></span></div>
-    <div class="why">${R.why}</div>
-    ${FL(u, lo)}
-    ${u.comp ? `<div class="m">청약 경쟁률 <em>${esc(u.comp)}</em></div>` : ''}
-    <div class="pills">${bks}</div>
-    <div class="m"><a href="https://www.youtube.com/@%EA%B3%B5%EB%AA%A8%EC%A3%BC%ED%88%AC%EC%9E%90%EC%9D%98%EB%B2%95%EC%B9%99/search?query=${encodeURIComponent(u.name.replace(/\s*\(.*?\)/g, ''))}" target="_blank" rel="noopener">공모주투자의법칙 분석 영상 찾기 ↗</a> <span class="hint">(참고용 · 유통물량·최종 확약·종합점수)</span></div>
-    <div class="m">균등 최소 증거금 <em>${minM ? won(minM) + '원' : '–'}</em>${minM && nOk ? ` × ${nOk}계좌 = <em>${won(minM*nOk)}원</em>` : ''}${u.refund ? ` · 환불 ${sd(u.refund)}` : ''}</div>
-    ${can.length ? `<div class="pills">${can.map(x => `<span class="pill ${x.ok ? 'ok' : 'no'}">${esc(x.p.name)}</span>`).join('')}</div>` : ''}
+    <dl class="kvl">${[
+      u.float ? ['상장일 유통', `${u.float.pct.toFixed(0)}%${lo ? ' · ' + eok(u.float.shares * lo) + '원' : ''}`] : null,
+      ['주관 · 한도', (u.alloc && u.alloc.length ? u.alloc : u.brokers.map(b => ({name: b}))).map(a => esc(a.name) + (a.limit && a.limit !== '-' ? ` <small>${esc(a.limit)}주</small>` : '')).join(' · ')],
+      ['균등 최소 증거금', minM ? won(minM) + '원' + (nOk > 1 ? ` <small>× ${nOk}계좌 = ${won(minM * nOk)}원</small>` : '') : '–'],
+      u.refund ? ['환불', sd(u.refund)] : null,
+      u.comp ? ['청약 경쟁률', esc(u.comp)] : null,
+      R.n ? ['비슷한 과거', `${R.n}건 · 시초 중앙 <b class="${cls(R.med)}">${pct(R.med)}</b>`] : null,
+      can.length ? ['청약 가능', can.filter(x => x.ok).map(x => esc(x.p.name)).join(' · ') || '없음'] : null,
+    ].filter(Boolean).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+    <details class="ir-why"><summary>자세한 근거 보기</summary>
+      <div class="why">${R.why}</div>
+      ${FL(u, lo)}
+      <div class="m"><a href="https://www.youtube.com/@%EA%B3%B5%EB%AA%A8%EC%A3%BC%ED%88%AC%EC%9E%90%EC%9D%98%EB%B2%95%EC%B9%99/search?query=${encodeURIComponent(u.name.replace(/\s*\(.*?\)/g, ''))}" target="_blank" rel="noopener">공모주투자의법칙 분석 영상 찾기 ↗</a></div>
+    </details>
   </div></details>`;
 }
 function renderUp(){
