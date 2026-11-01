@@ -1773,8 +1773,8 @@ let RES = {rows: []};
 try { const r = JSON.parse(localStorage.getItem(RK)); if (r && Array.isArray(r.rows)) RES = r; } catch(e){}
 const saveRes = () => { try { localStorage.setItem(RK, JSON.stringify(RES)); } catch(e){} };
 const BYNO = new Map([...IPO.upcoming, ...IPO.listed].map(u => [u.no, u]));   // 같은 종목이면 상장 결과(시초가)가 있는 쪽을 쓴다
-// 고를 수 있는 종목은 ☆로 '내 청약' 표시한 것 중 청약이 시작됐고 마감 60일 안 지난 것만
-const resPick = () => [...BYNO.values()].filter(u => (ACC.mine || []).includes(u.no) && u.sub && u.sub[0] <= T && u.sub[1] >= addDays(T, -60)).sort((a, b) => b.sub[1].localeCompare(a.sub[1]));
+// 고를 수 있는 종목은 ☆로 '내 청약' 표시한 것 중 마감 60일 안 지난 것(청약 전 종목도 미리 보임)
+const resPick = () => [...BYNO.values()].filter(u => (ACC.mine || []).includes(u.no) && u.sub && u.sub[1] >= addDays(T, -60)).sort((a, b) => b.sub[1].localeCompare(a.sub[1]));
 const sellPx = r => { const u = BYNO.get(r.no); return r.sell || (u && u.open) || null; };
 const resPL = r => { const u = BYNO.get(r.no), px = sellPx(r); return u && u.price && px != null ? (px - u.price) * r.qty - (r.fee || 0) : null; };
 const lastFee = bk => { const r = [...RES.rows].reverse().find(r => r.bk === bk && r.fee != null); return r ? r.fee : 2000; };   // 증권사별로 마지막에 적은 수수료를 기본값으로
