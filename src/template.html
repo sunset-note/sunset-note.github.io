@@ -152,17 +152,24 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .cal-top h2{font-size:16px;margin:0}
 .cal-nav{display:flex;align-items:center;gap:6px;font:600 15px var(--mono)}
 .cal-nav button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;width:32px;height:30px;cursor:pointer;font-size:16px}
-.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
-.cal .h{font:700 15.5px var(--font);color:var(--muted);text-align:center;padding:2px 0}
-.cal .h:first-child{color:var(--up)} .cal .h:last-child{color:var(--down)}
-.cal .d{min-height:86px;border-radius:8px;background:var(--soft);padding:3px 2px;display:flex;flex-direction:column;gap:2px;cursor:pointer;min-width:0;border:1.5px solid transparent;text-align:left;font:inherit;color:inherit}
-.cal .d.o{opacity:.35}
-.cal .d.t{border-color:var(--up)}
-.cal .d.sel{background:var(--panel);border-color:var(--ink)}
-.cal .n{font:600 15.5px var(--mono);color:var(--ink);padding-left:2px}
-.cal .e{font:700 14.5px/1.45 var(--font);letter-spacing:-.05em;border-radius:4px;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:clip;color:#fff}
-.cal .more{font:600 13.5px var(--font);color:var(--muted)}
-.ev-s{background:#e0559c} .ev-l{background:var(--down)} .ev-r{background:#8a8291} .ev-f{background:#b7791f}
+/* 공모주 캘린더: 주 단위 줄. 청약은 이틀짜리 막대 하나로 이어 그리고(주말에서 끊음), 상장·환불은 하루 막대. 막대는 연한 바탕 + 동그란 글자 배지 */
+.cal-hd{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-bottom:2px}
+.cal-hd .h{font:700 15px var(--font);color:var(--muted);text-align:center;padding:2px 0}
+.cal-hd .h:first-child{color:var(--up)} .cal-hd .h:last-child{color:var(--down)}
+.wk{--bh:26px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:3px;border-top:1px solid var(--line);padding:3px 0 7px}
+.wk .dn{background:none;border:0;border-radius:8px;cursor:pointer;padding:3px 0 0 5px;text-align:left;align-self:stretch;min-height:44px;font:600 15.5px var(--mono);color:var(--ink);display:flex;flex-direction:column;align-items:flex-start}
+.wk .dn:nth-child(7n+1) b{color:var(--up)} .wk .dn:nth-child(7n) b{color:var(--down)}
+.wk .dn b{font-weight:600;line-height:24px;min-width:24px;padding:0 4px;border-radius:7px;margin-left:-4px}
+.wk .dn.o{opacity:.35}
+.wk .dn.t b{background:#f08a9a;color:#fff!important}
+.wk .dn.sel{background:color-mix(in srgb,var(--soft) 60%,transparent)}
+.wk .dn small{font:600 12px var(--font);color:var(--muted);margin-top:auto;padding-bottom:2px}
+.bar{--c:#e0559c;pointer-events:none;z-index:1;margin:0 2px;height:var(--bh);border-radius:8px;display:flex;align-items:center;gap:5px;padding:0 6px 0 3px;min-width:0;overflow:hidden;white-space:nowrap;
+  background:color-mix(in srgb,var(--c) 24%,var(--panel));font:600 14.5px var(--font);letter-spacing:-.04em;color:var(--ink)}
+.bar i{flex:none;width:20px;height:20px;border-radius:50%;background:var(--c);color:#fff;font:700 11.5px/20px var(--font);text-align:center;font-style:normal;letter-spacing:0}
+.bar.o{opacity:.4}
+.bar.b-s{--c:#f0a06a} .bar.b-l{--c:#7aaee0} .bar.b-r{--c:#6cc49e}
+.ev-s{background:#f0a06a} .ev-l{background:#7aaee0} .ev-r{background:#6cc49e} .ev-f{background:#b7791f}
 .cal-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:15px;color:var(--muted);margin:8px 0 4px}
 .cal-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
 .day-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
@@ -233,9 +240,10 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .ir-top b{order:-1;flex:1 0 100%;white-space:normal;font-size:17.5px}
 .ir-kv{grid-template-columns:repeat(3,minmax(0,1fr))}
 .ir-kv span.fl{grid-column:span 2}
-.cal{gap:2px}
-.cal .d{padding:3px 1px}
-.cal .e{white-space:normal;word-break:break-all;font-size:13px;line-height:1.25;padding:1px 2px;letter-spacing:-.06em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;flex:none}
+.wk{--bh:23px}
+.wk .dn{font-size:14px;padding-left:3px}
+.bar{font-size:12.5px;gap:3px;padding:0 3px 0 2px;margin:0 1px;border-radius:6px;letter-spacing:-.06em}
+.bar i{width:17px;height:17px;font-size:10.5px;line-height:17px}
 }
 .ir-more{border-top:1px dashed var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:7px;font-size:14px}
 .ir-more .why{background:var(--soft);border-radius:8px;padding:8px 10px;line-height:1.55}
@@ -510,7 +518,8 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <main>
     <section class="card">
       <div class="cal-top"><h2>공모주 캘린더</h2><div class="cal-nav"><button type="button" id="calPrev" aria-label="이전 달">‹</button><span id="calMon"></span><button type="button" id="calNext" aria-label="다음 달">›</button></div></div>
-      <div class="cal" id="ipoCal"></div>
+      <div class="cal-hd"><div class="h">일</div><div class="h">월</div><div class="h">화</div><div class="h">수</div><div class="h">목</div><div class="h">금</div><div class="h">토</div></div>
+      <div id="ipoCal"></div>
       <div class="cal-legend"><span><i class="ev-f"></i>수요예측</span><span><i class="ev-s"></i>청약</span><span><i class="ev-r"></i>환불</span><span><i class="ev-l"></i>상장</span></div>
       <div class="day-list" id="ipoDay"></div>
     </section>
@@ -1644,11 +1653,28 @@ function renderCal(){
   const E = events(), [y, m] = calM.split('-').map(Number);
   const first = new Date(Date.UTC(y, m - 1, 1)), start = addDays(calM + '-01', -first.getUTCDay());
   $('calMon').textContent = `${y}.${String(m).padStart(2, '0')}`;
-  let h = ['일','월','화','수','목','금','토'].map(d => `<div class="h">${d}</div>`).join('');
-  for (let i = 0, d = start; i < 42; i++, d = addDays(d, 1)) {
-    if (i === 35 && d.slice(0, 7) !== calM) break;
-    const ev = (E[d] || []).filter(e => e.k !== 'f'), show = ev.slice(0, 3);
-    h += `<button type="button" class="d${d.slice(0, 7) !== calM ? ' o' : ''}${d === T ? ' t' : ''}${d === calSel ? ' sel' : ''}" data-d="${d}"><span class="n">${+d.slice(8)}</span>${show.map(e => `<span class="e ${EVK[e.k][1]}">${esc(e.u.name.replace(/\s*\(.*?\)/g, ''))}</span>${e.k === 's' ? whoDots(e.u, true) : ''}`).join('')}${ev.length > 3 ? `<span class="more">+${ev.length - 3}</span>` : ''}</button>`;
+  // 막대 목록: 청약은 연속된 영업일끼리 하나로(주말을 끼면 둘로), 상장·환불은 하루. 수요예측은 아래 날짜 목록에서만 보여 준다
+  const S = [], src = IPO.upcoming.concat(IPO.listed.filter(l => !IPO.upcoming.some(u => u.no === l.no)));
+  for (const u of src) {
+    if (ACC.spacUp !== '1' && isSpac(u.name)) continue;
+    if (u.sub) { let run = null; for (let d = u.sub[0]; d <= u.sub[1]; d = addDays(d, 1)) if (isBiz(d)) { if (run && addDays(run.b, 1) === d) run.b = d; else S.push(run = {k:'s', u, a:d, b:d}); } }
+    if (u.refund) S.push({k:'r', u, a:u.refund, b:u.refund});
+    if (u.list) S.push({k:'l', u, a:u.list, b:u.list});
+  }
+  const KO = {s:0, l:1, r:2}, LET = {s:'청', l:'상', r:'환'}, MAXL = 5, lastD = addDays(new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10), -1);
+  let h = '';
+  for (let ws = start; ws <= lastD; ws = addDays(ws, 7)) {
+    const we = addDays(ws, 6), col = d => Math.round((Date.parse(d) - Date.parse(ws)) / 864e5);
+    const W = S.filter(x => x.b >= ws && x.a <= we).map(x => ({...x, c0: col(x.a < ws ? ws : x.a), c1: col(x.b > we ? we : x.b)}))
+      .sort((p, q) => p.c0 - q.c0 || (q.c1 - q.c0) - (p.c1 - p.c0) || KO[p.k] - KO[q.k]);
+    const lanes = [], hid = Array(7).fill(0);
+    for (const x of W) { let l = lanes.findIndex(e => e < x.c0); if (l < 0) { l = lanes.length; lanes.push(-1); } lanes[l] = x.c1; x.l = l; if (l >= MAXL) for (let c = x.c0; c <= x.c1; c++) hid[c]++; }
+    const L = Math.min(lanes.length, MAXL);
+    h += `<div class="wk" style="grid-template-rows:28px${L ? ` repeat(${L},var(--bh))` : ''}">`;
+    for (let i = 0; i < 7; i++) { const d = addDays(ws, i);
+      h += `<button type="button" class="dn${d.slice(0, 7) !== calM ? ' o' : ''}${d === T ? ' t' : ''}${d === calSel ? ' sel' : ''}" data-d="${d}" style="grid-column:${i + 1};grid-row:1/${L + 2}"><b>${+d.slice(8)}</b>${hid[i] ? `<small>+${hid[i]}</small>` : ''}</button>`; }
+    for (const x of W) if (x.l < MAXL) h += `<span class="bar b-${x.k}${x.a.slice(0, 7) !== calM && x.b.slice(0, 7) !== calM ? ' o' : ''}" style="grid-column:${x.c0 + 1}/span ${x.c1 - x.c0 + 1};grid-row:${x.l + 2}"><i>${LET[x.k]}</i>${esc(x.u.name.replace(/\s*\(.*?\)/g, ''))}</span>`;
+    h += '</div>';
   }
   $('ipoCal').innerHTML = h;
   const L = E[calSel] || [], ord = {f:0, s:1, r:2, l:3};
