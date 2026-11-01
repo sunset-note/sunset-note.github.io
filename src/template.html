@@ -2359,7 +2359,7 @@ const payLag = s => s === 'SPY' ? 42 : 5;
 const qtyAt = (s, d) => PF.trades.filter(t => t.sym === s && t.d < d).reduce((a, t) => a + (t.side === 'buy' ? t.qty : -t.qty), 0);
 function divPlan(c){
   const T = today(), [y0, m0] = T.split('-').map(Number), yearAgo = dAdd(T, -365), months = [], out = [], stocks = [];
-  for (let i = 0; i < 12; i++) months.push(new Date(Date.UTC(y0, m0 - 1 + i, 1)).toISOString().slice(0, 7));
+  for (let i = 0; i < 13; i++) months.push(new Date(Date.UTC(y0, m0 - 1 + i, 1)).toISOString().slice(0, 7));
   const qty = {}; for (const p of c.H) qty[p.sym] = (qty[p.sym] || 0) + p.qty;
   for (const [s, q] of Object.entries(qty)) {
     const L = DIV[s]; if (!L) continue;
@@ -2368,7 +2368,7 @@ function divPlan(c){
     for (const e of L) { const pay = dAdd(e.d, lag), n = qtyAt(s, e.d); if (e.d <= T && pay >= T && n > 0) out.push({s, pay, won: n * e.a * f, conf: true}); }   // 배당락이 지나 받을 금액이 정해진 것
     for (const e of recent) {   // 나머지는 작년 같은 달 금액으로 예상. 올해 실제 배당과 겹치면 뺀다
       const ex = (+e.d.slice(0, 4) + 1) + e.d.slice(4), pay = dAdd(ex, lag), gap = d => Math.abs(Date.parse(d) - Date.parse(ex)) / 864e5;
-      if (pay >= T && pay.slice(0, 7) <= months[11] && !L.some(x => gap(x.d) < 20)) out.push({s, pay, won: q * e.a * f, conf: false});
+      if (pay >= T && pay.slice(0, 7) <= months[12] && !L.some(x => gap(x.d) < 20)) out.push({s, pay, won: q * e.a * f, conf: false});
     }
     stocks.push({s, q, ttm, y: px ? ttm / px : null, won: q * ttm * f});
   }
@@ -2377,18 +2377,21 @@ function divPlan(c){
 function divRender(c){
   const el = $('usDiv'), P = divPlan(c), year = P.stocks.reduce((a, x) => a + x.won, 0);
   el.hidden = !P.stocks.length || !(year > 0); if (el.hidden) return;
-  const by = P.months.map(m => P.out.filter(e => e.pay.slice(0, 7) === m)), sum = A => A.reduce((a, e) => a + e.won, 0), top = Math.max(...by.map(sum), 1);
-  if (!P.months.includes(divSel) || !by[P.months.indexOf(divSel)].length) divSel = (P.months[by.findIndex(A => A.length)] || P.months[0]);
-  const A = by[P.months.indexOf(divSel)], next = P.out[0], md = d => +d.slice(5, 7) + '.' + +d.slice(8);
+  // 막대는 1~12월 순서. 달마다 가장 가까운 입금을 보여 준다(이번 달에 받을 게 없으면 내년 같은 달)
+  const sum = A => A.reduce((a, e) => a + e.won, 0), list = m => P.out.filter(e => e.pay.slice(0, 7) === m);
+  const months = Array.from({length: 12}, (_, i) => { const mm = String(i + 1).padStart(2, '0'), C = P.months.filter(m => m.slice(5) === mm); return C.find(m => list(m).length) || C[0]; });
+  const by = months.map(list), top = Math.max(...by.map(sum), 1), next = P.out[0], md = d => +d.slice(5, 7) + '.' + +d.slice(8);
+  if (!months.includes(divSel)) divSel = next ? next.pay.slice(0, 7) : months[0];
+  const A = by[months.indexOf(divSel)];
   el.innerHTML = `<h3>배당</h3><section class="kpis">` +
     kpi('연 배당금', man(year), `월평균 ${man(year / 12)} · 세전`) +
     kpi('배당률', c.val ? (year / c.val * 100).toFixed(2) + '%' : '–', '최근 1년 배당 ÷ 지금 평가액') +
     kpi('다음 입금', next ? won(sum(P.out.filter(e => e.pay === next.pay))) + '원' : '–', next ? `${md(next.pay)} 전후${next.conf ? ' · 금액 확정' : ' · 예상'}` : '') +
-    kpi('가장 많은 달', +P.months[by.findIndex(A => sum(A) === top)].slice(5) + '월', `약 ${won(top)}원`) + `</section>
-    <div class="dv-bars">${P.months.map((m, i) => { const v = sum(by[i]);
+    kpi('가장 많은 달', +months[by.findIndex(A => sum(A) === top)].slice(5) + '월', `약 ${won(top)}원`) + `</section>
+    <div class="dv-bars">${months.map((m, i) => { const v = sum(by[i]);
       return `<button type="button" class="dv-b${by[i].some(e => e.conf) ? ' c' : ''}${m === divSel ? ' sel' : ''}" data-m="${m}" aria-label="${+m.slice(5)}월 ${won(v)}원" title="${+m.slice(5)}월 ${won(v)}원"><i style="height:${v ? Math.max(v / top * 100, 3).toFixed(0) : 0}px"></i><span>${+m.slice(5)}</span></button>`; }).join('')}</div>
     <div class="dv-leg"><span><i style="background:#5f9bd6"></i>금액 확정</span><span><i style="background:#a9c8e8"></i>예상</span></div>
-    <div class="dv-m"><b>${+divSel.slice(5)}월</b> ${A.length ? `약 <b>${won(sum(A))}원</b>` : '입금 없음'}${A.map(e => `<div class="dv-r"><span>${esc(nameOf(e.s))} <small>${md(e.pay)} 전후${e.conf ? '' : ' · 예상'}</small></span><span>${won(e.won)}원</span></div>`).join('')}</div>
+    <div class="dv-m"><b>${divSel.slice(0, 4)}년 ${+divSel.slice(5)}월</b> ${A.length ? `약 <b>${won(sum(A))}원</b>` : '입금 없음'}${A.map(e => `<div class="dv-r"><span>${esc(nameOf(e.s))} <small>${md(e.pay)} 전후${e.conf ? '' : ' · 예상'}</small></span><span>${won(e.won)}원</span></div>`).join('')}</div>
     <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">종목별 배당률</summary><div class="tablewrap" style="margin-top:6px"><table><thead><tr><th style="text-align:left">종목</th><th>배당률</th><th>1주당 (1년)</th><th>연 배당금</th></tr></thead><tbody>${P.stocks.map(x => `<tr><td style="text-align:left;font-family:var(--font)">${esc(nameOf(x.s))}</td><td>${x.y != null ? (x.y * 100).toFixed(2) + '%' : '–'}</td><td>${isKR(x.s) ? won(x.ttm) + '원' : '$' + x.ttm.toFixed(2)}</td><td>${won(x.won)}원</td></tr>`).join('')}</tbody></table></div></details>
     <p class="hint" style="margin-top:8px">최근 1년 실제 배당을 지금 수량에 곱한 세전 금액입니다. 앞으로의 금액은 작년 같은 달 기준 예상이고, 입금일은 배당락일로 추정한 날짜입니다. 일반 계좌는 약 15%를 떼고 들어오며, ISA·연금 계좌는 과세 방식이 다릅니다.</p>`;
 }
