@@ -194,12 +194,6 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .sc-a{color:#1f9d6b}.sc-b{color:#3b82c4}.sc-c{color:#c07a12}.sc-d{color:#d0455b}
 .yt{font:700 12.5px var(--font);border-radius:6px;padding:1px 6px;flex:none;border:1.5px dashed currentColor;text-decoration:none}
 .yt-A{color:#1f9d6b}.yt-B{color:#3b82c4}.yt-C{color:#c07a12}.yt-D{color:#d0455b}
-.yt{font:700 12.5px var(--font);border-radius:6px;padding:1px 6px;flex:none;border:1.5px dashed currentColor}
-.yt-A{color:#1f9d6b}.yt-B{color:#3b82c4}.yt-C{color:#c07a12}.yt-D{color:#d0455b}
-.ytp{display:flex;flex-wrap:wrap;align-items:center;gap:5px;background:var(--soft);border-radius:8px;padding:7px 9px}
-.ytp>span{font-size:13.5px;color:var(--muted);margin-right:4px}
-.ytp button{font:700 13.5px var(--mono);min-width:38px;height:32px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
-.ytp button.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .rec{cursor:help;font:700 12.5px var(--font);border-radius:6px;padding:2px 7px;flex:none;color:#fff}
 .rec-x{background:#9a93a0} .rec-e{background:#1f9d6b} .rec-c{background:#d08a1a} .rec-p{background:var(--down)} .rec-l{background:#e0559c} .rec-w{background:var(--soft);color:var(--muted)}
 .ir-d{font:14px var(--mono);color:var(--muted)}
@@ -537,10 +531,10 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       <div id="rsList"></div>
     </section>
     <section class="card" id="ytCard" hidden>
-      <div class="head"><h2>공모주린이 vs 우리 점수</h2><p class="hint">카드를 펼쳐 공모주린이 등급을 누르면 쌓입니다. 상장하면 시초가로 누가 더 잘 맞췄는지 비교합니다. 이 기기와 연동한 기기에만 보입니다.</p></div>
-      <section class="kpis" id="ytKpis"></section>
-      <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th style="text-align:left">종목</th><th>린이</th><th>우리</th><th>상장일</th><th>시초 수익률</th></tr></thead><tbody id="ytRows"></tbody></table></div>
-      <p class="hint" style="margin-top:8px" id="ytHint"></p>
+      <div class="head"><h2>공모주린이 등급별 성적</h2><p class="hint">공모주린이 유튜브 영상 끝의 종합점수를 맥미니가 2시간마다 자동으로 모으고, 상장하면 시초가로 등급별 결과를 쌓습니다. 이 기기와 연동한 기기에만 보입니다.</p></div>
+      <div class="tablewrap"><table><thead><tr><th style="text-align:left">공모주린이 등급</th><th>기록</th><th>상장 끝남</th><th>시초 손실</th><th>시초 중앙값</th><th>시초 평균</th><th>1주 평균 손익</th></tr></thead><tbody id="ytGrade"></tbody></table></div>
+      <p class="hint" style="margin-top:8px" id="ytNote"></p>
+      <div class="tablewrap" style="margin-top:10px;max-height:420px"><table><thead><tr><th style="text-align:left">종목</th><th>공모주린이</th><th>이 사이트</th><th>상장일</th><th>시초 수익률</th></tr></thead><tbody id="ytRows"></tbody></table></div>
     </section>
     <section class="card">
       <div class="head"><h2>상장 결과 (최근 1년)</h2><div class="seg" id="ipoSpac" style="min-width:180px"><button type="button" data-v="0">스팩 제외</button><button type="button" data-v="1">전체</button></div></div>
@@ -1433,14 +1427,12 @@ const AK = 'ipo-acc2';
 let ACC = {spac:'0', spacUp:'0', period:'2023', people:[], mine:[]};   // mine: ☆로 고른 내 청약 종목 번호(등급과 상관없이 구글 캘린더에 등록)
 try { const s = JSON.parse(localStorage.getItem(AK)); if (s && Array.isArray(s.people)) ACC = Object.assign(ACC, s); } catch(e){}
 const saveAcc = () => { try { localStorage.setItem(AK, JSON.stringify(ACC)); } catch(e){} };
-// 공모주린이 유튜브 종합점수(A+~D): 내가 영상을 보고 탭 한 번으로 적는다. 남의 평가라 페이지·GitHub에는 넣지 않고
-// 이 기기와 연동 저장소(키 'ipo-yt1')에만 둔다. 계좌 정보가 있는 기기(=나)에서만 입력 칸과 비교표가 보인다
-const YK = 'ipo-yt1', YG = ['A+','A','A-','B+','B','B-','C+','C','C-','D'];
-let YT = {g:{}};
-try { const y = JSON.parse(localStorage.getItem(YK)); if (y && y.g) YT = y; } catch(e){}
-const saveYt = () => { try { localStorage.setItem(YK, JSON.stringify(YT)); } catch(e){} };
+// 공모주린이 유튜브 종합점수(A+~D): 맥미니가 2시간마다 새 영상 자막에서 뽑아 중계 서버에 올린다. 남의 평가라 페이지·GitHub에는 넣지 않고
+// 계좌 정보가 있는 기기(=나)만 연동 키로 서버에서 받아 카드와 등급별 성적표에 보여 준다
 const OWN = () => ACC.people.length > 0;
-const ytTag = no => OWN() && YT.g[no] ? `<span class="yt yt-${YT.g[no][0]}" title="공모주린이 종합점수">린이 ${YT.g[no]}</span>` : '';
+const YG = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-'];
+let YT = {};   // 종목 번호 → {g, v(영상 ID)}
+const ytTag = no => YT[no] ? `<a class="yt yt-${YT[no].g[0]}" href="https://youtu.be/${YT[no].v}" target="_blank" rel="noopener" title="공모주린이 유튜브 종합점수 · 누르면 영상">공모주린이 ${YT[no].g}</a>` : '';
 const SETUP = '#setup=';
 if (location.hash.startsWith(SETUP)) {
   try {
@@ -1613,7 +1605,6 @@ function itemHTML(u){
     ${u.comp ? `<div class="m">청약 경쟁률 <em>${esc(u.comp)}</em></div>` : ''}
     <div class="pills">${bks}</div>
     <div class="m"><a href="https://www.youtube.com/@%EA%B3%B5%EB%AA%A8%EC%A3%BC%ED%88%AC%EC%9E%90%EC%9D%98%EB%B2%95%EC%B9%99/search?query=${encodeURIComponent(u.name.replace(/\s*\(.*?\)/g, ''))}" target="_blank" rel="noopener">공모주투자의법칙 분석 영상 찾기 ↗</a> <span class="hint">(참고용 · 유통물량·최종 확약·종합점수)</span></div>
-    ${OWN() ? `<div class="ytp"><span>공모주린이 등급</span>${YG.map(g => `<button type="button" data-yt="${u.no}" data-g="${g}" class="${YT.g[u.no] === g ? 'on' : ''}">${g}</button>`).join('')}</div>` : ''}
     <div class="m">균등 최소 증거금 <em>${minM ? won(minM) + '원' : '–'}</em>${minM && nOk ? ` × ${nOk}계좌 = <em>${won(minM*nOk)}원</em>` : ''}${u.refund ? ` · 환불 ${sd(u.refund)}` : ''}</div>
     ${can.length ? `<div class="pills">${can.map(x => `<span class="pill ${x.ok ? 'ok' : 'no'}">${esc(x.p.name)}</span>`).join('')}</div>` : ''}
   </div></details>`;
@@ -1661,13 +1652,6 @@ function renderCal(){
 $('ipoCal').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (!b) return; calSel = b.dataset.d; if (calSel.slice(0, 7) !== calM) calM = calSel.slice(0, 7); renderCal(); });
 const shiftM = n => { const [y, m] = calM.split('-').map(Number), d = new Date(Date.UTC(y, m - 1 + n, 1)); calM = d.toISOString().slice(0, 7); renderCal(); };
 $('ipoUp').addEventListener('click', e => {
-  const y = e.target.closest('[data-yt]');
-  if (y) {   // 같은 등급을 다시 누르면 지움. 다시 그려도 그 카드는 펼친 채로 둔다
-    const no = +y.dataset.yt; if (YT.g[no] === y.dataset.g) delete YT.g[no]; else YT.g[no] = y.dataset.g;
-    saveYt(); renderUp(); renderYt();
-    const d = $('ipoUp').querySelector(`details[data-no="${no}"]`); if (d) d.open = true;
-    return;
-  }
   const b = e.target.closest('[data-mine]'); if (!b) return;
   e.preventDefault(); e.stopPropagation();
   const no = +b.dataset.mine, M = ACC.mine = (ACC.mine || []).filter(x => x !== no);
@@ -1862,26 +1846,38 @@ function spear(x, y){
   return saa && sbb ? sab / Math.sqrt(saa * sbb) : null;
 }
 function renderYt(){
-  $('ytCard').hidden = !OWN(); if (!OWN()) return;
-  const L = Object.keys(YT.g).map(Number).map(no => BYNO.get(no)).filter(Boolean).sort((a, b) => (b.sub ? b.sub[1] : '').localeCompare(a.sub ? a.sub[1] : ''));
-  const gv = g => 10 - YG.indexOf(g), D = L.filter(u => u.open && u.price && u.score != null);
-  const r = D.map(u => u.open / u.price - 1), sy = D.length >= 3 ? spear(D.map(u => gv(YT.g[u.no])), r) : null, so = D.length >= 3 ? spear(D.map(u => u.score), r) : null;
-  const med = A => { const v = A.map(u => (u.open / u.price - 1) * 100).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : null; };
-  const yTop = D.filter(u => gv(YT.g[u.no]) >= 7), oTop = D.filter(u => ['l', 'p'].includes(recKind(u.inst, u.lock ?? 0)));
-  const f = v => v == null ? '–' : (v >= 0 ? '+' : '') + v.toFixed(2);
-  $('ytKpis').innerHTML = kpi('기록', L.length + '종목', `상장 끝난 비교 ${D.length}건`) +
-    kpi('린이 순위 일치도', f(sy), '1에 가까울수록 등급 순서대로 올랐음', sy == null ? '' : cls(sy)) +
-    kpi('우리 점수 순위 일치도', f(so), '같은 종목들로 계산', so == null ? '' : cls(so)) +
-    kpi('추천 종목 시초 중앙값', `린이 ${yTop.length ? pct(med(yTop)) : '–'} · 우리 ${oTop.length ? pct(med(oTop)) : '–'}`, '린이 B+ 이상 / 우리 대출·비례');
-  $('ytRows').innerHTML = L.length ? L.map(u => { const R = u.inst != null ? REC[recKind(u.inst, u.lock ?? 0)] : null, v = u.open && u.price ? (u.open / u.price - 1) * 100 : null;
-    return `<tr><td style="text-align:left;font-family:var(--font)">${esc(u.name)}</td><td><span class="yt yt-${YT.g[u.no][0]}">${YT.g[u.no]}</span></td>
+  const L = Object.keys(YT).map(Number).map(no => BYNO.get(no)).filter(Boolean).sort((a, b) => (b.sub ? b.sub[1] : '').localeCompare(a.sub ? a.sub[1] : ''));
+  $('ytCard').hidden = !OWN() || !L.length; if ($('ytCard').hidden) return;
+  const D = L.filter(u => u.open && u.price), ret = u => (u.open / u.price - 1) * 100;
+  const st = A => { const v = A.map(ret).sort((a, b) => a - b), n = v.length; return n ? {n, loss: v.filter(x => x < 0).length, med: v[n >> 1], avg: v.reduce((a, b) => a + b, 0) / n, won: A.reduce((a, u) => a + u.open - u.price, 0) / n} : null; };
+  $('ytGrade').innerHTML = ['A', 'B', 'C', 'D'].map(c => { const A = L.filter(u => YT[u.no].g[0] === c), S = st(D.filter(u => YT[u.no].g[0] === c));
+    return `<tr><td style="text-align:left"><span class="yt yt-${c}">${c}+ · ${c} · ${c}-</span></td><td>${A.length}</td><td>${S ? S.n : 0}</td><td>${S ? S.loss + '건 (' + (S.loss / S.n * 100).toFixed(0) + '%)' : '–'}</td>
+      <td class="${S ? cls(S.med) : ''}">${S ? pct(S.med) : '–'}</td><td class="${S ? cls(S.avg) : ''}">${S ? pct(S.avg) : '–'}</td><td class="${S ? cls(S.won) : ''}">${S ? (S.won >= 0 ? '+' : '') + won(S.won) + '원' : '–'}</td></tr>`; }).join('');
+  // 참고: 같은 종목들에서 등급(또는 이 사이트 점수) 순서와 시초 수익 순서가 얼마나 같았는지
+  const DS = D.filter(u => u.score != null), f = v => v == null ? '–' : (v >= 0 ? '+' : '') + v.toFixed(2);
+  const sy = DS.length >= 3 ? spear(DS.map(u => -YG.indexOf(YT[u.no].g)), DS.map(ret)) : null, so = DS.length >= 3 ? spear(DS.map(u => u.score), DS.map(ret)) : null;
+  $('ytNote').innerHTML = `시초 중앙값은 '보통 이 정도'(대박 몇 건에 덜 흔들림), 평균은 대박까지 포함한 값, 1주 평균 손익은 균등 1주를 받았을 때 시초가에 판 금액입니다. ` +
+    (D.length < 20 ? `상장 끝난 종목이 ${D.length}건이라 아직은 우연일 수 있습니다(20건 넘으면 의미가 생깁니다). ` : '') +
+    (DS.length >= 3 ? `참고로 같은 ${DS.length}개 종목에서 등급 순서와 시초 수익 순서의 일치도(1에 가까울수록 같음)는 공모주린이 <b>${f(sy)}</b>, 이 사이트 점수 <b>${f(so)}</b>입니다.` : '');
+  $('ytRows').innerHTML = L.map(u => { const R = u.inst != null ? REC[recKind(u.inst, u.lock ?? 0)] : null, v = u.open && u.price ? ret(u) : null;
+    return `<tr><td style="text-align:left;font-family:var(--font)">${esc(u.name)}</td><td>${ytTag(u.no)}</td>
       <td style="font-family:var(--font)">${R ? `<span class="rec ${R[1]}" style="margin-right:4px">${R[0]}</span>` : ''}${u.score != null ? u.score + '점' : '–'}</td>
-      <td>${u.list ? md(u.list) : '미정'}</td><td class="${cls(v)}">${v == null ? '상장 대기' : pct(v)}</td></tr>`; }).join('')
-    : '<tr><td colspan="5" style="text-align:center;color:var(--muted)">아직 기록이 없습니다. 위 일정 카드를 펼쳐 등급을 눌러 주세요.</td></tr>';
-  $('ytHint').textContent = D.length < 20 ? `비교 ${D.length}건: 20건은 넘어야 우연과 실력을 구분할 수 있습니다. 그 전에는 참고만 하세요.` : `비교 ${D.length}건 기준입니다.`;
+      <td>${u.list ? md(u.list) : '미정'}</td><td class="${cls(v)}">${v == null ? '상장 대기' : pct(v)}</td></tr>`; }).join('');
 }
+// 주인 기기만 연동 키로 등급을 받아온다(서버가 주인 키가 아니면 거절). 이름이 정확히 같은 종목에만 붙인다: '영광'과 '영광와이케이엠씨'는 다른 종목
+(async () => {
+  let sid = null; try { sid = localStorage.getItem('sync-id'); } catch(e){}
+  if (!OWN() || !sid) return;
+  try {
+    const r = await fetch(`https://sunset-fx.ghlckd01.workers.dev/yt/${sid}`, {cache: 'no-store'}); if (!r.ok) return;
+    const nm = s => (s || '').replace(/\(.*?\)|\s|주식회사|㈜/g, ''), by = {};
+    for (const [v, x] of Object.entries(await r.json()).sort((a, b) => a[1].d.localeCompare(b[1].d))) by[nm(x.n)] = {g: x.g, v};
+    for (const u of BYNO.values()) if (by[nm(u.name)]) YT[u.no] = by[nm(u.name)];
+    renderUp(); renderYt();
+  } catch(e){}
+})();
 $('ipoAsof').textContent = IPO.asof;
-segUI(); renderUp(); renderDone(); renderStats(); renderGrade(); renderScore(); renderAcc(); renderRes(); renderYt();
+segUI(); renderUp(); renderDone(); renderStats(); renderGrade(); renderScore(); renderAcc(); renderRes();
 // 수요예측 결과 실시간 반영: 페이지를 열 때 38커뮤니케이션 수요예측 결과(중계 서버 10분 캐시)를 받아 기관경쟁률·확약·확정 공모가를 덮어쓰고 등급·점수를 다시 매긴다
 (async () => {
   const num = s => { const v = parseFloat(String(s || '').replace(/[^\d.\-]/g, '')); return isFinite(v) ? v : null; };
@@ -2384,7 +2380,7 @@ if (!document.getElementById('tab-etf').hidden) window.etfShow();
 (function(){
 const $ = id => document.getElementById(id);
 const PROXY = 'https://sunset-fx.ghlckd01.workers.dev';
-const KEYS = ['kimp-pf1', 'us-pf1', 'ipo-acc2', 'ipo-res1', 'ipo-yt1'];
+const KEYS = ['kimp-pf1', 'us-pf1', 'ipo-acc2', 'ipo-res1'];
 const LS = window.localStorage, rawSet = Storage.prototype.setItem;
 const get = k => { try { return LS.getItem(k); } catch(e) { return null; } };
 const put = (k, v) => { try { rawSet.call(LS, k, v); } catch(e) {} };
