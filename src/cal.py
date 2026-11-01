@@ -21,7 +21,7 @@ def kind(i, l):
 FAMILY = {"한투", "미래", "NH", "대신"}   # 가족 계좌가 있는 증권사
 NAME = {"l": "대출", "p": "비례", "e": "균등"}
 COLOR = "2"  # 공모주 일정은 전부 연두(Sage)
-ACT = {"l": "마통까지 써서 비례", "p": "여유자금으로 비례", "e": "균등 최소 수량"}
+ACT = {"l": "여유자금+마통으로 비례", "p": "여유자금으로 비례", "e": "균등 최소 수량"}
 INST_B, LOCK_B = [0, 100, 500, 1000, 1e12], [0, 1, 5, 15, 1e12]
 bk = lambda B, v: next(j for j in range(4) if B[j] <= v < B[j + 1])
 H = [x for x in D["listed"] if x["list"] >= "2023-06-26" and "스팩" not in x["name"] and x.get("inst") is not None and x.get("price") and x.get("open")]

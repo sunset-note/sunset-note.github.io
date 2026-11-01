@@ -1595,7 +1595,7 @@ function itemHTML(u){
   const bks = (u.alloc && u.alloc.length ? u.alloc : u.brokers.map(b => ({name:b}))).map(a =>
     `<span class="pill">${esc(a.name)}${a.shares ? ' ' + (a.shares/1e4).toFixed(a.shares<1e5?1:0) + '만주' : ''}${a.limit && a.limit !== '-' ? ' · 한도 ' + esc(a.limit) : ''}</span>`).join('');
   // 등급별 할 일(2023-07~2026-10 데이터로 정한 김프 기준 포함). 패스는 카드를 흐리고 작게 보여 눈에 덜 띄게 한다
-  const ACT = {l: `👉 마감일 ${sd(u.sub[1])} 14~15시에 마통 비례 <small>· 김프 +0.5% 이상일 때만</small>`, p: `👉 여유자금으로 비례 <small>· 마감일 김프 +1.5% 이상일 때만, 아니면 균등 최소</small>`,
+  const ACT = {l: `👉 마감일 ${sd(u.sub[1])} 14~15시에 비례 <small>· 김프 +1.5% 이상이면 여유자금+마통, +0.5~1.5%면 마통만, 그 아래면 균등 최소</small>`, p: `👉 여유자금으로 비례 <small>· 마감일 김프 +1.5% 이상일 때만, 아니면 균등 최소</small>`,
     w: `⏳ 수요예측 결과가 나오면 등급을 매깁니다${u.fc ? ` <small>· ${md(u.fc[0])}~${md(u.fc[1])}</small>` : ''}`}[R.k] || '';
   const ph = phase(u), dl = ph === 'wait' ? `청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 <b>${u.list ? sd(u.list) : '미정'}</b>` : `청약 <b>${sd(u.sub[0])}~${sd(u.sub[1])}</b> · 상장 ${u.list ? sd(u.list) : '미정'}`;
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}" data-no="${u.no}"><summary>
@@ -1684,7 +1684,7 @@ const GSTAT = {};
 function recTip(k, i, lk){
   if (k === 'w' || i == null) return '수요예측 결과(기관경쟁률·확약)가 나오면 등급을 매깁니다.';
   if (!GSTAT[k]) { const G = HINT.filter(l => l.inst != null && recKind(l.inst, l.lock ?? 0) === k); GSTAT[k] = {post: gstat(G.filter(isPost)), pre: gstat(G.filter(l => !isPost(l)))}; }
-  const g = GSTAT[k], act = {l:'마통까지 써서 비례', p:'여유자금으로 비례', e:'균등 최소 수량', c:'패스 권장 (균등 1주 기대값이 수수료 빼면 2천원 안팎)', x:'청약 안 함'}[k];
+  const g = GSTAT[k], act = {l:'여유자금+마통으로 비례 (마감일 김프 +1.5% 이상이면 둘 다, +0.5% 이상이면 마통만)', p:'여유자금으로 비례', e:'균등 최소 수량', c:'패스 권장 (균등 1주 기대값이 수수료 빼면 2천원 안팎)', x:'청약 안 함'}[k];
   return `${REC[k][0]}: 기관 ${won(i)}:1 · 확약 ${(lk ?? 0).toFixed(1)}%\n기준: ${RULE_TXT[k]}\n같은 등급 ${gtxt(g.post, '개편 후')}\n같은 등급 ${gtxt(g.pre, '개편 전')}\n→ ${act}`;
 }
 function renderGrade(){
