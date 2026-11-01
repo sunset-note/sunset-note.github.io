@@ -267,6 +267,8 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .bk{display:flex;flex-wrap:wrap;gap:4px}
 .bk button{font:500 13px var(--font);padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
 .bk button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.bk button.blk{background:transparent;border:1.5px dashed #d08a1a;color:#c07a12;font-weight:700}
+.acc .warn{background:color-mix(in srgb,#d08a1a 12%,transparent);border-radius:8px;padding:6px 9px;font-size:14px;color:var(--ink)}
 .prio{margin:0;padding-left:18px;font-size:14px}
 .prio li{margin:2px 0}
 .prio small{color:var(--muted);font-family:var(--mono)}
@@ -1427,6 +1429,8 @@ const AK = 'ipo-acc2';
 let ACC = {spac:'0', spacUp:'0', period:'2023', people:[], mine:[]};   // mine: ☆로 고른 내 청약 종목 번호(등급과 상관없이 구글 캘린더에 등록)
 try { const s = JSON.parse(localStorage.getItem(AK)); if (s && Array.isArray(s.people)) ACC = Object.assign(ACC, s); } catch(e){}
 const saveAcc = () => { try { localStorage.setItem(AK, JSON.stringify(ACC)); } catch(e){} };
+// blk: 계좌는 있지만 지금 못 쓰는 증권사(고객 확인·신분증 인증 등). 청약 가능 표시와 결과 입력에서 빼고, 다음 개설 칸에 할 일로 띄운다
+const useB = p => (p.b || []).filter(b => !(p.blk || []).includes(b));
 // 공모주린이 유튜브 종합점수(A+~D): 맥미니가 2시간마다 새 영상 자막에서 뽑아 중계 서버에 올린다. 남의 평가라 페이지·GitHub에는 넣지 않고
 // 계좌 정보가 있는 기기(=나)만 연동 키로 서버에서 받아 카드와 등급별 성적표에 보여 준다
 const OWN = () => ACC.people.length > 0;
@@ -1563,7 +1567,7 @@ function rec(u){
 const WHO_C = ['#7a5af8', '#1f9d6b', '#f08a24', '#0ea5b7', '#b7791f'];
 function whoGroups(){
   const G = new Map();
-  for (const p of ACC.people) { const k = p.b.slice().sort().join(','); if (!G.has(k)) G.set(k, {names: [], b: p.b}); G.get(k).names.push(p.name); }
+  for (const p of ACC.people) { const B = useB(p), k = B.slice().sort().join(','); if (!G.has(k)) G.set(k, {names: [], b: B}); G.get(k).names.push(p.name); }
   return [...G.values()].map((g, i) => Object.assign(g, {c: WHO_C[i % WHO_C.length]}));
 }
 const whoDots = (u, mini) => { const G = whoGroups(); return G.length ? `<span class="who${mini ? ' mini' : ''}">${G.map(g => { const ok = u.brokers.some(b => g.b.includes(b));
@@ -1590,7 +1594,7 @@ function itemHTML(u){
   const [st, sc] = status(u), R = rec(u), [rl, rc] = REC[R.k], mine = (ACC.mine || []).includes(u.no);
   const px = u.price || null, lo = px || +(u.band||'').split('~')[0].replace(/,/g,'') || null;
   const minM = lo ? lo * 10 * (u.margin || 50) / 100 : null;
-  const can = ACC.people.map(p => ({p, ok: u.brokers.some(b => p.b.includes(b))}));
+  const can = ACC.people.map(p => ({p, ok: u.brokers.some(b => useB(p).includes(b))}));
   const nOk = can.filter(x => x.ok).length;
   const bks = (u.alloc && u.alloc.length ? u.alloc : u.brokers.map(b => ({name:b}))).map(a =>
     `<span class="pill">${esc(a.name)}${a.shares ? ' ' + (a.shares/1e4).toFixed(a.shares<1e5?1:0) + '만주' : ''}${a.limit && a.limit !== '-' ? ' · 한도 ' + esc(a.limit) : ''}</span>`).join('');
@@ -1737,8 +1741,9 @@ function renderAcc(){
       <div class="row2"><label class="field"><span>이름</span><input type="text" data-k="name" value="${esc(p.name)}"></label>
         <label class="field"><span>마지막 계좌 개설일</span><input type="date" data-k="last" value="${p.last}"></label></div>
       <div class="m" style="font:14px var(--font)">${next ? (nd <= 0 ? '<b class="up">지금 개설 가능</b>' : `다음 개설 가능 <b>${next}(${wd(next)})</b> · D-${nd}`) + ` <span class="hint">(약 20영업일)</span>` : '<span class="hint">개설일을 넣으면 다음 가능일을 계산합니다.</span>'}</div>
-      <div><span class="lbl">보유 증권사 (${p.b.length})</span><div class="bk" style="margin-top:4px">${MAIN.map(b => `<button type="button" data-b="${b}" aria-pressed="${p.b.includes(b)}">${b}</button>`).join('')}</div></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">다음에 만들 계좌</span><button type="button" class="pf-del" data-del="1">이 사람 삭제</button></div><div>${miss.length ? `<ol class="prio">${miss.map(b => `<li>${b} <small>1년 ${BK[b]?.n || 0}건 · 평균 시초 ${pct(BK[b] && BK[b].n ? BK[b].o/BK[b].n : null)} · 예정 ${BK[b]?.up || 0}건</small></li>`).join('')}</ol>` : '<p class="hint" style="margin-top:4px">주요 증권사를 모두 보유하고 있습니다.</p>'}</div>
+      <div><span class="lbl">보유 증권사 (${useB(p).length}${(p.blk || []).length ? ` · 사용 불가 ${p.blk.length}` : ''}) <small class="hint">누를 때마다 보유 → 사용 불가(인증 필요) → 없음</small></span><div class="bk" style="margin-top:4px">${MAIN.map(b => { const bl = (p.blk || []).includes(b);
+        return `<button type="button" data-b="${b}" aria-pressed="${p.b.includes(b)}" class="${bl ? 'blk' : ''}" title="${bl ? '사용 불가: 고객 확인·신분증 인증 필요' : ''}">${bl ? '⚠ ' : ''}${b}</button>`; }).join('')}</div></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="lbl">다음에 만들 계좌</span><button type="button" class="pf-del" data-del="1">이 사람 삭제</button></div>${(p.blk || []).length ? `<div class="warn">⚠ 먼저 풀 것: <b>${p.blk.map(esc).join(', ')}</b> 계좌 사용 불가(고객 확인·신분증 인증 필요). 풀기 전엔 이 증권사 청약을 못 해서 청약 가능 표시에서 뺐습니다.</div>` : ''}<div>${miss.length ? `<ol class="prio">${miss.map(b => `<li>${b} <small>1년 ${BK[b]?.n || 0}건 · 평균 시초 ${pct(BK[b] && BK[b].n ? BK[b].o/BK[b].n : null)} · 예정 ${BK[b]?.up || 0}건</small></li>`).join('')}</ol>` : '<p class="hint" style="margin-top:4px">주요 증권사를 모두 보유하고 있습니다.</p>'}</div>
     </div>`;
   }).join('');
   const rows = Object.entries(BK).sort((a, b) => (b[1].n + b[1].up) - (a[1].n + a[1].up));
@@ -1758,7 +1763,10 @@ $('ipoAcc').addEventListener('click', e => {
   if (d) { const i = +d.closest('.p').dataset.i; if (confirm(`'${ACC.people[i].name}' 계좌 정보를 지울까요?`)) { ACC.people.splice(i, 1); saveAcc(); renderAcc(); renderUp(); } return; }
   const b = e.target.closest('button[data-b]'); if (!b) return;
   const p = ACC.people[+b.closest('.p').dataset.i], k = b.dataset.b;
-  p.b = p.b.includes(k) ? p.b.filter(x => x !== k) : p.b.concat(k);
+  const bl = p.blk || (p.blk = []);   // 없음 → 보유 → 사용 불가 → 없음
+  if (!p.b.includes(k)) p.b = p.b.concat(k);
+  else if (!bl.includes(k)) bl.push(k);
+  else { p.b = p.b.filter(x => x !== k); p.blk = bl.filter(x => x !== k); }
   saveAcc(); renderAcc(); renderUp();
 });
 $('ipoAcc').addEventListener('change', e => {
@@ -1788,7 +1796,7 @@ function resForm(){
 function resPeople(){
   const u = BYNO.get(+$('rsNo').value);
   if (!u) { $('rsPeople').innerHTML = ''; $('rsHint').textContent = ''; return; }
-  const P = (ACC.people.length ? ACC.people : [{name:'나', b:u.brokers}]).map(p => ({p, B: u.brokers.filter(b => (p.b || []).includes(b))})).filter(x => x.B.length);
+  const P = (ACC.people.length ? ACC.people : [{name:'나', b:u.brokers}]).map(p => ({p, B: u.brokers.filter(b => useB(p).includes(b))})).filter(x => x.B.length);
   const minM = u.price ? u.price * 10 * (u.margin || 50) / 100 : '';
   const had = new Set(RES.rows.filter(r => r.no === u.no).map(r => r.who));
   $('rsPeople').innerHTML = P.length ? P.map(({p, B}, i) => `<div class="rs-in" data-i="${i}" data-who="${esc(p.name)}">
