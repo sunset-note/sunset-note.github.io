@@ -1,7 +1,6 @@
 <title>sunset의 투자노트</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* 레이아웃: 왼쪽 조건 패널(데스크톱 고정) + 오른쪽 결과. 모바일은 위아래로 쌓임.
    색: 한국 시장 관례대로 상승/수익=빨강, 하락/매수구간=파랑 */
@@ -9,8 +8,8 @@
   --sky:linear-gradient(160deg,#ffecd2 0%,#fcb69f 38%,#e9a6c0 58%,#c3a9e8 76%,#a1c4fd 100%); --glass:rgba(255,248,240,.72); --veil:rgba(251,246,238,.55);
   --bg:#FBF6EE; --panel:#ffffff; --ink:#2E2A33; --muted:#7B7380; --line:#EADFCF; --soft:#F5EEE3;
   --up:#d9343a; --down:#1f62d0; --proxy:#f3ead3; --proxy-ink:#8a6a1d; --usdt:#15213a; --btc:#9aa6b8; --ma:#b7791f; --closed:#e9edf3;
-  --font:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --font:"Pretendard Variable",Pretendard,-apple-system,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"Pretendard Variable",Pretendard,-apple-system,system-ui,"Apple SD Gothic Neo",sans-serif;   /* 숫자도 같은 글꼴, 자릿수 정렬은 body의 tnum */
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --sky:linear-gradient(160deg,#3b1d4a 0%,#2a2350 45%,#14203f 100%); --glass:rgba(38,35,43,.72); --veil:rgba(28,26,32,.45);
@@ -22,7 +21,7 @@
   --up:#ff6b6e; --down:#5d9bff; --proxy:#2a2519; --proxy-ink:#d6b46a; --usdt:#e5eaf2; --btc:#5f6b80; --ma:#e0a64a; --closed:#1b2333; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:linear-gradient(var(--veil),var(--veil)) fixed,var(--sky) fixed,var(--bg);background-attachment:fixed;min-height:100vh;color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5}
+body{background:linear-gradient(var(--veil),var(--veil)) fixed,var(--sky) fixed,var(--bg);background-attachment:fixed;min-height:100vh;color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;font-feature-settings:"tnum";letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1320px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
 header{background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:16px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
 h1{font-size:25px;font-weight:700;margin:0;letter-spacing:-.02em;text-wrap:balance}
@@ -207,13 +206,18 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .yt{font:700 12.5px var(--font);border-radius:6px;padding:1px 6px;flex:none;border:1.5px dashed currentColor;text-decoration:none}
 .yt-S{color:#8a4fd0}.yt-A{color:#1f9d6b}.yt-B{color:#3b82c4}.yt-C{color:#c07a12}.yt-D{color:#d0455b}
 .rec{cursor:help;font:700 12.5px var(--font);border-radius:6px;padding:2px 7px;flex:none;color:#fff}
-.rec-x{background:#9a93a0} .rec-e{background:#1f9d6b} .rec-c{background:#d08a1a} .rec-p{background:var(--down)} .rec-l{background:#e0559c} .rec-w{background:var(--soft);color:var(--muted)}
-.ir-d{font:14px var(--mono);color:var(--muted)}
+.rec-x{background:color-mix(in srgb,#9a93a0 20%,transparent);color:#76707c} .rec-e{background:color-mix(in srgb,#1f9d6b 18%,transparent);color:#178a5c}
+.rec-c{background:color-mix(in srgb,#d08a1a 20%,transparent);color:#a96b0e} .rec-p{background:color-mix(in srgb,#3b82c4 18%,transparent);color:#2f6fae}
+.rec-l{background:color-mix(in srgb,#e0559c 18%,transparent);color:#c23d82} .rec-w{background:var(--soft);color:var(--muted)}
+.ir-d{font:14.5px var(--font);color:var(--muted)}
+.ir-s{font:14px var(--font);color:var(--muted)}
+.ir-s b{color:var(--ink);font-weight:600}
+.ir[open] .ir-s{display:none}
 .ir.g-l{box-shadow:inset 5px 0 0 #e0559c}.ir.g-p{box-shadow:inset 5px 0 0 var(--down)}
 .ir.g-l summary,.ir.g-p summary{padding-left:16px}
-.ir.g-x,.ir.g-c{background:var(--soft);border-style:dashed}
+.ir.g-x,.ir.g-c{opacity:.78}
 .ir.g-x .ir-top b,.ir.g-c .ir-top b{font-weight:500;color:var(--muted)}
-.ir.g-x .ir-kv,.ir.g-c .ir-kv{display:none}
+.ir.g-x .ir-s,.ir.g-c .ir-s{display:none}
 .ir-act{font:600 14.5px/1.45 var(--font);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
 .ir-act small{font-weight:400;color:var(--muted);font-size:13px}
 .ir-d b{color:var(--ink);font-weight:600}
@@ -1621,9 +1625,10 @@ function itemHTML(u){
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}" data-no="${u.no}"><summary>
     <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}${ytTag(u.no)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<i class="brk"></i><span class="dd ${/중|마감일|오늘/.test(st) ? 'dd-now' : st.startsWith('청약') ? 'dd-s' : st.startsWith('상장') ? 'dd-l' : ''}">${st}</span></div>
     <div class="ir-d">${dl}</div>
+    <div class="ir-s">${px ? `공모가 <b>${won(px)}원</b>` : `밴드 <b>${esc(u.band || '–')}</b>`}${u.inst != null ? ` · 기관 <b>${won(u.inst)}:1</b> · 확약 <b>${(u.lock ?? 0).toFixed(1)}%</b>` : ' · 수요예측 전'}</div>
+  </summary><div class="ir-more">
     ${ACT ? `<div class="ir-act">${ACT}</div>` : ''}
     <div class="ir-kv"><span><small>공모가</small><b>${px ? won(px) : esc((u.band||'–').split('~')[0]) + '~'}</b></span>${u.inst != null ? `<span><small>기관</small><b>${won(u.inst) + ':1'}</b></span><span><small>확약</small><b>${(u.lock ?? 0).toFixed(1) + '%'}${LD(u) ? ` <small class="${LD(u) > 0 ? 'up' : 'down'}">${LD(u) > 0 ? '▲' : '▼'}${Math.abs(LD(u)).toFixed(1)}p</small>` : ''}</b></span>` : `<span class="wide"><small>기관 · 확약</small><b>수요예측 전</b></span>`}<span class="fl"><small>유통</small><b>${u.float ? u.float.pct.toFixed(0) + '%' + (lo ? ' · ' + eok(u.float.shares * lo) : '') : '–'}</b></span><span><small>주관</small><b>${esc(u.brokers.join('·'))}</b></span></div>
-  </summary><div class="ir-more">
     <div class="why">${R.why}</div>
     ${FL(u, lo)}
     ${u.comp ? `<div class="m">청약 경쟁률 <em>${esc(u.comp)}</em></div>` : ''}
