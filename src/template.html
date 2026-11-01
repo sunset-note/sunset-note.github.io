@@ -643,7 +643,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="tablewrap" style="margin-top:6px;max-height:none">
       <table><thead><tr><th>계좌</th><th style="text-align:left">종목</th><th>수량</th><th>평균 단가</th><th>현재가</th><th>평가액</th><th>손익</th><th>수익률</th><th>비중</th></tr></thead><tbody id="usHold"></tbody></table>
     </div>
-    <div class="seg" id="usPane" style="margin-top:16px;max-width:480px;display:none"><button type="button" data-v="div">배당</button><button type="button" data-v="tax">내야 할 세금</button><button type="button" data-v="pen">연금 수령액</button><button type="button" data-v="pj">미래 자산</button></div>
+    <div class="seg" id="usPane" style="margin-top:16px;max-width:480px;display:none"><button type="button" data-v="div">배당</button><button type="button" data-v="tax">세금</button><button type="button" data-v="pen">연금</button><button type="button" data-v="pj">미래 자산</button></div>
     <div class="dv" id="usDiv" hidden></div>
     <div class="dv" id="usTax" hidden></div>
     <div class="dv" id="usPen" hidden></div>
@@ -2532,14 +2532,14 @@ function pjRender(c){
   const R = PJ ? pjMemo[N.cur] : null, rl = R ? pjRoll(R, y) : null, hv = n => !R ? null : n === 'avg' ? (rl ? rl.avg : pjCagr(R, R.length)) : n === 'min' ? (rl ? rl.min : null) : pjCagr(R, n), pc = v => (v * 100).toFixed(1) + '%';
   const useH = N.h && hv(N.h) != null, r = useH ? hv(N.h) : N.r / 100, add = N.c * 1e4;
   const L = pjPath(c.val, add, r, y), A = L.map((_, i) => c.val + add * i), Q = L.map((v, i) => v / 1.02 ** i), end = L[y];
-  const seg = (k, Ls, on, f) => `<div class="seg" data-k="${k}">${Ls.map(v => `<button type="button" data-n="${v}" aria-pressed="${on(v)}"${f ? f(v) : ' style="white-space:nowrap"'}>${typeof v === 'number' && k === 'r' ? v + '%' : k === 'y' ? v + '년' : k === 'cur' ? (v === 'usd' ? '달러 기준' : '원화 기준') : (v === 'avg' ? y + '년 구간 평균' : v === 'min' ? y + '년 구간 최저' : '최근 ' + v + '년') + '<br><small>' + (hv(v) != null ? pc(hv(v)) : R ? '자료 없음' : '…') + '</small>'}</button>`).join('')}</div>`;
+  const seg = (k, Ls, on, f) => `<div class="seg" data-k="${k}">${Ls.map(v => `<button type="button" data-n="${v}" aria-pressed="${on(v)}"${f ? f(v) : ' style="white-space:nowrap"'}>${typeof v === 'number' && k === 'r' ? v + '%' : k === 'y' ? v + '년' : k === 'cur' ? (v === 'usd' ? '달러 기준' : '원화 기준') : (v === 'avg' ? y + '년 구간 평균' : v === 'min' ? y + '년 구간 최저' : v + '년') + '<br><small>' + (hv(v) != null ? pc(hv(v)) : R ? '자료 없음' : '…') + '</small>'}</button>`).join('')}</div>`;
   const inp = (k, l, v) => `<label class="field"><span>${l}</span><input type="number" step="any" data-k="${k}" value="${v}"></label>`;
   const rg = rl ? pjPath(c.val, add, rl.min, y)[y] : null, rx = rl ? pjPath(c.val, add, rl.max, y)[y] : null;
   const W = Math.max(300, el.clientWidth || 640);
   pjPts = {L, A, Q, W, ml: 54, mr: 62, top: [1, 2, 2.5, 5, 7.5, 10].map(x => x * 10 ** Math.floor(Math.log10(Math.max(...L, ...A, 1)))).find(x => x >= Math.max(...L, ...A, 1))};
   el.innerHTML = `<h3>미래 자산 전망</h3>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 12px;margin-bottom:8px"><div><span class="lbl">기간</span>${seg('y', [10, 20, 30, 40], v => y === v)}</div><div><span class="lbl">수익률 직접 고르기</span>${seg('r', [4, 5, 6, 7, 10], v => !useH && N.r === v)}</div></div>
-    <div style="margin-bottom:8px"><span class="lbl">과거 수익률 쓰기 (지금 비중 기준)</span>${seg('h', ['avg', 'min'], v => useH && N.h === v, v => hv(v) == null && R ? ' disabled' : '')}<div style="height:6px"></div>${seg('h', [10, 20, 30, 40, 50], v => useH && N.h === v, v => hv(v) == null && R ? ' disabled' : '')}<div style="height:6px"></div>${seg('cur', ['usd', 'krw'], v => N.cur === v)}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 12px;margin-bottom:8px"><div><span class="lbl">기간</span>${seg('y', [10, 20, 30, 40], v => y === v)}</div><div><span class="lbl">수익률 직접 고르기</span>${seg('r', [4, 5, 6, 7, 10], v => !useH && N.r === v)}</div></div>
+    <div style="margin-bottom:8px"><span class="lbl">과거 수익률 쓰기 (지금 비중 기준)</span>${seg('h', ['avg', 'min'], v => useH && N.h === v, v => hv(v) == null && R ? ' disabled' : '')}<span class="lbl" style="display:block;margin-top:6px">최근 평균</span>${seg('h', [10, 20, 30, 40, 50], v => useH && N.h === v, v => hv(v) == null && R ? ' disabled' : '')}<div style="height:6px"></div>${seg('cur', ['usd', 'krw'], v => N.cur === v)}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:10px">${inp('y', '기간 직접 입력(년)', y)}${inp('c', '매년 추가 납입(만원)', N.c)}${inp('r', '수익률 직접 입력(%)', N.r)}</div>
     <section class="kpis">${kpi(`${y}년 후 총액`, man(end), `연 ${pc(r)}${useH ? (N.h === 'avg' ? ` · 과거 ${y}년 구간 평균` : N.h === 'min' ? ` · 과거 ${y}년 구간 최저` : ` · 최근 ${N.h}년 평균`) : ''}`)}${kpi('오늘 돈 가치로', man(Q[y]), '물가 연 2% 가정')}${kpi('넣은 돈', man(A[y]), `지금 ${man(c.val)} + 납입 ${man(add * y)}`)}${kpi('불어난 돈', man(end - A[y]), `총액의 ${end ? ((end - A[y]) / end * 100).toFixed(0) : 0}%`)}</section>
     ${pjChart(L, A, Q, W)}
