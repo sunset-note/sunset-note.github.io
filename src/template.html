@@ -183,6 +183,7 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .dv-b{background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:128px;color:var(--muted);font:500 12px var(--font);border-radius:6px}
 .dv-b i{display:block;width:min(22px,70%);min-height:0;border-radius:4px 4px 0 0;background:#a9c8e8}
 .dv-b.c i{background:#5f9bd6}
+.dv-b.p i{background:#c5ced8}
 .dv-b span{margin-top:5px;line-height:18px;min-width:22px;text-align:center;border-radius:5px}
 .dv-b.sel span{background:var(--ink);color:var(--panel);font-weight:700}
 .dv-leg{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:8px}
@@ -2361,16 +2362,17 @@ const qtyAt = (s, acct, d) => PF.trades.filter(t => t.sym === s && t.acct === ac
 const divTaxRate = (acct, s) => /ISA|연금|IRP/.test(acct) ? 0 : isKR(s) ? .154 : .15;
 let divView = 'net'; try { divView = localStorage.getItem('us-div-view') || 'net'; } catch(e){}
 function divPlan(c){
-  const T = today(), [y0, m0] = T.split('-').map(Number), yearAgo = dAdd(T, -365), months = [], out = [], S = {};
-  for (let i = 0; i < 13; i++) months.push(new Date(Date.UTC(y0, m0 - 1 + i, 1)).toISOString().slice(0, 7));
+  const T = today(), y0 = T.slice(0, 4), yearAgo = dAdd(T, -365), months = Array.from({length: 12}, (_, i) => `${y0}-${String(i + 1).padStart(2, '0')}`), out = [], S = {}, lim = dAdd(T, 400);
   for (const p of c.H) {
     const s = p.sym, L = DIV[s]; if (!L) continue;
     const f = isKR(s) ? 1 : FX; if (!f) continue;
     const recent = L.filter(e => e.d > yearAgo), ttm = recent.reduce((a, e) => a + e.a, 0), lag = payLag(s), px = Q[s] && Q[s].px, keep = 1 - divTaxRate(p.acct, s);
-    for (const e of L) { const pay = dAdd(e.d, lag), n = qtyAt(s, p.acct, e.d); if (e.d <= T && pay >= T && n > 0) out.push({s, pay, won: n * e.a * f, net: n * e.a * f * keep, conf: true}); }   // 배당락이 지나 받을 금액이 정해진 것
+    for (const e of L) { const pay = dAdd(e.d, lag), n = qtyAt(s, p.acct, e.d);
+      if (e.d <= T && pay >= T && n > 0) out.push({s, pay, won: n * e.a * f, net: n * e.a * f * keep, conf: true});   // 배당락이 지나 받을 금액이 정해진 것
+      else if (pay < T && pay.slice(0, 4) === y0) out.push({s, pay, won: p.qty * e.a * f, net: p.qty * e.a * f * keep, past: true}); }   // 올해 지난 달: 실제 1주당 배당 × 지금 수량
     for (const e of recent) {   // 나머지는 작년 같은 달 금액으로 예상. 올해 실제 배당과 겹치면 뺀다
       const ex = (+e.d.slice(0, 4) + 1) + e.d.slice(4), pay = dAdd(ex, lag), gap = d => Math.abs(Date.parse(d) - Date.parse(ex)) / 864e5;
-      if (pay >= T && pay.slice(0, 7) <= months[12] && !L.some(x => gap(x.d) < 20)) out.push({s, pay, won: p.qty * e.a * f, net: p.qty * e.a * f * keep, conf: false});
+      if (pay >= T && pay <= lim && !L.some(x => gap(x.d) < 20)) out.push({s, pay, won: p.qty * e.a * f, net: p.qty * e.a * f * keep, conf: false});
     }
     const x = S[s] || (S[s] = {s, ttm, y: px ? ttm / px : null, won: 0, net: 0});
     x.won += p.qty * ttm * f; x.net += p.qty * ttm * f * keep;
@@ -2380,24 +2382,24 @@ function divPlan(c){
 function divRender(c){
   const el = $('usDiv'), P = divPlan(c), V = divView === 'net' ? 'net' : 'won', gross = P.stocks.reduce((a, x) => a + x.won, 0), net = P.stocks.reduce((a, x) => a + x.net, 0), year = V === 'net' ? net : gross;
   el.hidden = !P.stocks.length || !(gross > 0); if (el.hidden) return;
-  // 막대는 1~12월 순서. 달마다 가장 가까운 입금을 보여 준다(이번 달에 받을 게 없으면 내년 같은 달)
+  // 막대는 올해 1~12월. 다음 입금은 해가 넘어가도 알려 준다
   const sum = A => A.reduce((a, e) => a + e[V], 0), list = m => P.out.filter(e => e.pay.slice(0, 7) === m);
-  const months = Array.from({length: 12}, (_, i) => { const mm = String(i + 1).padStart(2, '0'), C = P.months.filter(m => m.slice(5) === mm); return C.find(m => list(m).length) || C[0]; });
-  const by = months.map(list), top = Math.max(...by.map(sum), 1), next = P.out[0], md = d => +d.slice(5, 7) + '.' + +d.slice(8), lab = V === 'net' ? '세후' : '세전';
-  if (!months.includes(divSel)) divSel = next ? next.pay.slice(0, 7) : months[0];
+  const months = P.months, soon = P.out.filter(e => !e.past);
+  const by = months.map(list), top = Math.max(...by.map(sum), 1), next = soon[0], md = d => +d.slice(5, 7) + '.' + +d.slice(8), lab = V === 'net' ? '세후' : '세전';
+  if (!months.includes(divSel)) divSel = next && months.includes(next.pay.slice(0, 7)) ? next.pay.slice(0, 7) : months[+today().slice(5, 7) - 1];
   const A = by[months.indexOf(divSel)], M = new Map();   // 같은 종목·같은 날 입금은 계좌가 달라도 한 줄로
-  for (const e of A) { const k = e.s + e.pay, r = M.get(k) || {s: e.s, pay: e.pay, conf: e.conf, v: 0}; r.v += e[V]; M.set(k, r); }
+  for (const e of A) { const k = e.s + e.pay, r = M.get(k) || {s: e.s, pay: e.pay, conf: e.conf, past: e.past, v: 0}; r.v += e[V]; M.set(k, r); }
   el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px"><h3 style="margin:0">배당</h3><div class="seg" id="usDivSeg" style="min-width:130px"><button type="button" data-v="net" aria-pressed="${V === 'net'}">세후</button><button type="button" data-v="won" aria-pressed="${V === 'won'}">세전</button></div></div><section class="kpis">` +
     kpi(`연 배당금 (${lab})`, man(year), V === 'net' ? `세전 ${man(gross)} · 입금 때 세금 ${man(gross - net)}` : `월평균 ${man(year / 12)}`) +
     kpi(`배당률 (${lab})`, c.val ? (year / c.val * 100).toFixed(2) + '%' : '–', '최근 1년 배당 ÷ 지금 평가액') +
-    kpi('다음 입금', next ? won(sum(P.out.filter(e => e.pay === next.pay))) + '원' : '–', next ? `${md(next.pay)} 전후${next.conf ? ' · 금액 확정' : ' · 예상'}` : '') +
+    kpi('다음 입금', next ? won(sum(soon.filter(e => e.pay === next.pay))) + '원' : '–', next ? `${next.pay.slice(0, 4) === months[0].slice(0, 4) ? '' : next.pay.slice(0, 4) + '.'}${md(next.pay)} 전후${next.conf ? ' · 금액 확정' : ' · 예상'}` : '') +
     kpi('가장 많은 달', +months[by.findIndex(A => sum(A) === top)].slice(5) + '월', `약 ${won(top)}원`) + `</section>
     <div class="dv-bars">${months.map((m, i) => { const v = sum(by[i]);
-      return `<button type="button" class="dv-b${by[i].some(e => e.conf) ? ' c' : ''}${m === divSel ? ' sel' : ''}" data-m="${m}" aria-label="${+m.slice(5)}월 ${won(v)}원" title="${+m.slice(5)}월 ${won(v)}원"><i style="height:${v ? Math.max(v / top * 100, 3).toFixed(0) : 0}px"></i><span>${+m.slice(5)}</span></button>`; }).join('')}</div>
-    <div class="dv-leg"><span><i style="background:#5f9bd6"></i>금액 확정</span><span><i style="background:#a9c8e8"></i>예상</span></div>
-    <div class="dv-m"><b>${divSel.slice(0, 4)}년 ${+divSel.slice(5)}월</b> ${A.length ? `약 <b>${won(sum(A))}원</b> <small style="color:var(--muted)">${lab}</small>` : '입금 없음'}${[...M.values()].map(e => `<div class="dv-r"><span>${esc(nameOf(e.s))} <small>${md(e.pay)} 전후${e.conf ? '' : ' · 예상'}</small></span><span>${won(e.v)}원</span></div>`).join('')}</div>
+      return `<button type="button" class="dv-b${by[i].some(e => e.conf) ? ' c' : by[i].length && by[i].every(e => e.past) ? ' p' : ''}${m === divSel ? ' sel' : ''}" data-m="${m}" aria-label="${+m.slice(5)}월 ${won(v)}원" title="${+m.slice(5)}월 ${won(v)}원"><i style="height:${v ? Math.max(v / top * 100, 3).toFixed(0) : 0}px"></i><span>${+m.slice(5)}</span></button>`; }).join('')}</div>
+    <div class="dv-leg"><span><i style="background:#c5ced8"></i>지난 달</span><span><i style="background:#5f9bd6"></i>금액 확정</span><span><i style="background:#a9c8e8"></i>예상</span></div>
+    <div class="dv-m"><b>${divSel.slice(0, 4)}년 ${+divSel.slice(5)}월</b> ${A.length ? `약 <b>${won(sum(A))}원</b> <small style="color:var(--muted)">${lab}</small>` : '입금 없음'}${[...M.values()].map(e => `<div class="dv-r"><span>${esc(nameOf(e.s))} <small>${md(e.pay)} 전후${e.conf ? '' : e.past ? ' · 지금 수량 기준' : ' · 예상'}</small></span><span>${won(e.v)}원</span></div>`).join('')}</div>
     <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">종목별 배당률</summary><div class="tablewrap" style="margin-top:6px"><table><thead><tr><th style="text-align:left">종목</th><th>배당률</th><th>1주당 (1년)</th><th>세전</th><th>세후</th></tr></thead><tbody>${P.stocks.map(x => `<tr><td style="text-align:left;font-family:var(--font)">${esc(nameOf(x.s))}</td><td>${x.y != null ? (x.y * 100).toFixed(2) + '%' : '–'}</td><td>${isKR(x.s) ? won(x.ttm) + '원' : '$' + x.ttm.toFixed(2)}</td><td>${won(x.won)}원</td><td>${won(x.net)}원</td></tr>`).join('')}</tbody></table></div></details>
-    <p class="hint" style="margin-top:8px">최근 1년 실제 배당을 지금 수량에 곱한 금액이고, 앞으로의 금액은 작년 같은 달 기준 예상입니다. 입금일은 배당락일로 추정한 날짜입니다. 세후는 입금 때 떼는 세금만 뺐습니다: 일반 계좌 국내 상장 15.4%, 미국 상장 15%. ISA·연금저축·IRP는 입금 때 떼지 않고, 해지·인출 때 정산하는 세금은 넣지 않았습니다.</p>`;
+    <p class="hint" style="margin-top:8px">최근 1년 실제 배당을 지금 수량에 곱한 금액이고, 앞으로의 금액은 작년 같은 달 기준 예상입니다. 그래프는 올해 1~12월이고, 지난 달은 올해 실제 1주당 배당에 지금 수량을 곱한 금액이라 그때 실제로 받은 돈과 다를 수 있습니다. 입금일은 배당락일로 추정한 날짜입니다. 세후는 입금 때 떼는 세금만 뺐습니다: 일반 계좌 국내 상장 15.4%, 미국 상장 15%. ISA·연금저축·IRP는 입금 때 떼지 않고, 해지·인출 때 정산하는 세금은 넣지 않았습니다.</p>`;
 }
 $('usDiv').addEventListener('click', e => {
   const t = e.target.closest('#usDivSeg button');
