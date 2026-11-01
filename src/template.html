@@ -643,10 +643,11 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="tablewrap" style="margin-top:6px;max-height:none">
       <table><thead><tr><th>계좌</th><th style="text-align:left">종목</th><th>수량</th><th>평균 단가</th><th>현재가</th><th>평가액</th><th>손익</th><th>수익률</th><th>비중</th></tr></thead><tbody id="usHold"></tbody></table>
     </div>
-    <div class="seg" id="usPane" style="margin-top:16px;max-width:380px;display:none"><button type="button" data-v="div">배당</button><button type="button" data-v="tax">내야 할 세금</button><button type="button" data-v="pen">연금 수령액</button></div>
+    <div class="seg" id="usPane" style="margin-top:16px;max-width:480px;display:none"><button type="button" data-v="div">배당</button><button type="button" data-v="tax">내야 할 세금</button><button type="button" data-v="pen">연금 수령액</button><button type="button" data-v="pj">미래 자산</button></div>
     <div class="dv" id="usDiv" hidden></div>
     <div class="dv" id="usTax" hidden></div>
     <div class="dv" id="usPen" hidden></div>
+    <div class="dv" id="usPj" hidden></div>
     <form class="pf-form" id="usForm">
       <label class="field"><span>날짜</span><input type="date" id="usD" required></label>
       <label class="field"><span>계좌</span><select id="usAcct"><option>해외주식(키움)</option><option>해외주식(미래)</option><option>ISA</option><option>연금저축</option><option>IRP</option><option>해외주식</option><option>국내주식</option></select></label>
@@ -2038,7 +2039,7 @@ const DATA = {};
 const SPLICE = {QQQ:'^NDX', QQQM:'^NDX', SPY:'^GSPC', VOO:'^GSPC', IVV:'^GSPC', SPYM:'^GSPC', SPLG:'^GSPC', IEF:'VFITX', TLT:'VUSTX'};   // 채권은 뱅가드 미국채 펀드(분배금 포함): 중기 1991~, 장기 1986~
 const SPN = {'^NDX':'나스닥100 지수', '^GSPC':'S&P500 지수', VFITX:'뱅가드 중기 미국채 펀드(VFITX)', VUSTX:'뱅가드 장기 미국채 펀드(VUSTX)'};
 const SPLICED = {};
-const FXOLD = __FXOLD__;   // 2004년 이전 원/달러(FRED DEXKOUS): 야후 KRW=X가 2003-12부터라 그 앞을 채운다
+const FXOLD = window.FXOLD_ = __FXOLD__;   // 2004년 이전 원/달러(FRED DEXKOUS): 야후 KRW=X가 2003-12부터라 그 앞을 채운다
 async function load(sym){
   if (DATA[sym]) return DATA[sym];
   const r = await fetch(`${PROXY}/chart/${encodeURIComponent(sym)}?period1=0&period2=9999999999&interval=1d&events=div%7Csplit`);
@@ -2469,17 +2470,98 @@ function penRender(c){
     ${R.map(([x, v]) => `<div class="dv-m"><b>${x}세부터 ${x + N.y}세까지</b><div class="dv-r"><span>납입 ${v.n}번 뒤 잔액</span><span>${man(v.bal)}</span></div><div class="dv-r"><span>세전 월 수령</span><span>${man(v.m)}</span></div><div class="dv-r"><span>월 세금 <small>${(v.rate * 100).toFixed(1)}%</small></span><span>${man(v.tax)}</span></div><div class="dv-r"><span><b>세후 월 수령</b></span><span><b>${man(v.net)}</b></span></div><div class="dv-r"><span>${N.y}년간 낼 세금</span><span>${man(v.total)}</span></div></div>`).join('') || '<p class="hint">55세·65세가 지난 나이는 계산하지 않습니다.</p>'}
     <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">계산 기준</summary><p class="hint" style="margin-top:6px">지금 연금저축·IRP 평가액 ${man(bal0)}(나스닥 비중 ${bal0 ? (nq / bal0 * 100).toFixed(0) : 0}%)에서 시작해 매년 초 납입하고, 수령을 시작하면 납입을 멈춘다고 봤습니다. 수령 중에도 남은 돈이 같은 수익률로 불어나고, 매달 같은 금액을 받다가 기간이 끝나면 잔액이 0이 됩니다. 죽을 때까지 나오는 종신연금이 아닙니다. 오늘 가치는 물가 연 2%로 환산했고, 전액 세액공제를 받았다고 봤습니다. 연 수령액이 1,500만원을 넘으면 16.5% 분리과세로 계산했고, 다른 소득이 적으면 종합과세가 더 유리할 수 있습니다. 수익률 5·7·10%는 통계가 아닌 가정입니다. 2026년 10월 연금 계좌 비율로 과거 22년을 납입했다면 연 수익률이 달러 기준 11.6~15.4%(5개 구간), 원화 기준 17.1%(2004년 시작 1개 구간)였지만, 표본이 적고 나스닥이 이례적으로 강했던 기간입니다. 32년 납입은 나스닥 ETF 기록이 27년뿐이라 과거 자료로 검증할 수 없습니다. 실제 수익률은 해마다 다르고 수령 직전 폭락이면 표보다 적을 수 있으며, 세법도 바뀔 수 있습니다.</p></details>`;
 }
+// 미래 자산 전망: 매년 초 납입 + 같은 수익률 복리. 과거 수익률은 지금 비중으로 매년 리밸런싱한 값
+let PJ = null, pjBusy = false, pjFail = false, pjPts = null, pjMemo = {};
+const pjAt = m => { const k = [...m.keys()].sort(); return {first: k[0], last: k[k.length - 1], at(d){ let lo = 0, hi = k.length - 1, r = -1; while (lo <= hi) { const x = (lo + hi) >> 1; if (k[x] <= d) { r = x; lo = x + 1; } else hi = x - 1; } return r < 0 ? null : m.get(k[r]); }}; };
+const pjChain = L => { const o = new Map(L[0]); for (const s of L.slice(1)) { const d0 = [...o.keys()].sort()[0], i0 = pjAt(s).at(d0); if (!i0) continue; const f = o.get(d0) / i0; for (const [d, v] of s) if (d < d0) o.set(d, v * f); } return o; };
+function pjBond(ie, tn){ const o = new Map(ie), d0 = [...o.keys()].sort()[0]; let v = o.get(d0); for (const d of [...tn.keys()].filter(d => d < d0).sort().reverse()) { v /= 1 + tn.get(d) / 100 / 252; o.set(d, v); } return o; }   // IEF 이전은 10년물 금리만큼 이자가 붙었다고 본다
+function pjReturns(P, w, cur){
+  const y1 = +P.end.slice(0, 4), tail = P.end.slice(4), R = [];
+  for (let y = 1971; y < y1; y++) { const a = y + tail, b = (y + 1) + tail;
+    if (a < P.N.first || (cur === 'krw' && a < P.F.first)) continue;
+    let r = w.s * P.S.at(b) / P.S.at(a) + w.n * P.N.at(b) / P.N.at(a) + w.b * P.B.at(b) / P.B.at(a);
+    if (cur === 'krw') r *= P.F.at(b) / P.F.at(a);
+    R.push(r); }
+  return R;
+}
+const pjCagr = (R, n) => { if (R.length < n) return null; let g = 1; for (const r of R.slice(-n)) g *= r; return g ** (1 / n) - 1; };
+function pjRoll(R, n){ if (R.length < n) return null; const L = []; for (let i = 0; i + n <= R.length; i++) { let g = 1; for (let j = i; j < i + n; j++) g *= R[j]; L.push(g ** (1 / n) - 1); } L.sort((a, b) => a - b); return {min: L[0], med: L[L.length >> 1], max: L[L.length - 1], cnt: L.length}; }
+const pjPath = (v0, add, r, y) => { const L = [v0]; let v = v0; for (let i = 0; i < y; i++) { v = (v + add) * (1 + r); L.push(v); } return L; };
+async function pjLoad(){
+  if (PJ || pjBusy) return; pjBusy = true;
+  try { const [sp, qq, ie, gs, tr, nd, ix, tn, kr] = await Promise.all(['SPY', 'QQQ', 'IEF', '^GSPC', '^SP500TR', '^NDX', '^IXIC', '^TNX', 'KRW=X'].map(evSeries));
+    const fx = new Map(window.FXOLD_ || []); for (const [d, v] of kr) fx.set(d, v);
+    const S = pjAt(pjChain([sp, tr, gs])); PJ = {S, N: pjAt(pjChain([qq, nd, ix])), B: pjAt(pjBond(ie, tn)), F: pjAt(fx), end: S.last};
+  } catch (e) { pjFail = true; }
+  pjBusy = false; render();
+}
+function pjWeights(c){
+  const E = {s: 0, n: 0, b: 0};
+  for (const p of c.H) { const v = p.val || 0, k = exOf(p.sym);
+    if (k === 'nq') E.n += v; else if (k === 'bond') E.b += v; else if (k === 'spb') { E.s += v / 2; E.b += v / 2; } else if (k === 'nqb') { E.n += v / 2; E.b += v / 2; } else E.s += v; }
+  const t = E.s + E.n + E.b || 1; return {s: E.s / t, n: E.n / t, b: E.b / t};
+}
+function pjChart(L, A, Q, W){
+  const H = 250, m = {l: 54, r: 62, t: 12, b: 26}, n = L.length - 1, top = Math.max(...L, ...A, 1), p = 10 ** Math.floor(Math.log10(top)), nice = [1, 2, 2.5, 5, 10].find(x => x * p >= top) * p;
+  const X = i => m.l + (W - m.l - m.r) * i / n, Y = v => H - m.b - (H - m.t - m.b) * v / nice, path = S => S.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
+  const st = n <= 15 ? 5 : n <= 30 ? 10 : n <= 60 ? 20 : 30; let xs = '', ys = '';
+  for (let i = 0; i <= 4; i++) { const v = nice * i / 4; ys += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-opacity=".55"/><text x="${m.l - 7}" y="${Y(v) + 4}" text-anchor="end" font-size="12" fill="var(--muted)">${v ? (v >= 1e8 ? +(v / 1e8).toFixed(1) + '억' : Math.round(v / 1e4) + '만') : '0'}</text>`; }
+  for (let i = 0; i <= n; i += st) xs += `<text x="${X(i)}" y="${H - 7}" text-anchor="middle" font-size="12" fill="var(--muted)">${i ? i + '년 후' : '지금'}</text>`;
+  const tag = [['총액', L[n], '#3f7fc0'], ['오늘 가치', Q[n], '#3fa77f'], ['넣은 돈', A[n], '#7d8894']].map(x => ({t: x[0], y: Y(x[1]), c: x[2]})).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < tag.length; i++) if (tag[i].y - tag[i - 1].y < 15) tag[i].y = tag[i - 1].y + 15;
+  return `<div class="pj-w" style="position:relative;margin-top:12px"><svg width="${W}" height="${H}" style="display:block;touch-action:pan-y;font-family:var(--font)" role="img" aria-label="연도별 예상 총액 그래프">${ys}${xs}
+    <path d="${path(A)}" fill="none" stroke="#7d8894" stroke-width="2" stroke-dasharray="5 4"/><path d="${path(Q)}" fill="none" stroke="#3fa77f" stroke-width="2"/><path d="${path(L)}" fill="none" stroke="#3f7fc0" stroke-width="2.5"/>
+    ${tag.map(x => `<text x="${W - m.r + 6}" y="${x.y + 4}" font-size="12" fill="var(--ink)">${x.t}</text>`).join('')}<g class="pj-h" style="display:none"><line y1="${m.t}" y2="${H - m.b}" stroke="var(--muted)" stroke-opacity=".6"/>${['#3f7fc0', '#3fa77f', '#7d8894'].map(c => `<circle r="4.5" fill="${c}" stroke="var(--panel)" stroke-width="2"/>`).join('')}</g></svg>
+    <div class="pj-t" style="display:none;position:absolute;top:8px;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:13px;line-height:1.5;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.08)"></div></div>`;
+}
+function pjHover(e){
+  const w = e.target.closest && e.target.closest('.pj-w'); if (!w || !pjPts) return;
+  const P = pjPts, r = w.getBoundingClientRect(), n = P.L.length - 1, i = Math.max(0, Math.min(n, Math.round((e.clientX - r.left - P.ml) / (P.W - P.ml - P.mr) * n))), x = P.ml + (P.W - P.ml - P.mr) * i / n;
+  const g = w.querySelector('.pj-h'), t = w.querySelector('.pj-t'), H = 250, Y = v => H - 26 - (H - 38) * v / P.top;
+  g.style.display = ''; const l = g.querySelector('line'); l.setAttribute('x1', x); l.setAttribute('x2', x);
+  [P.L[i], P.Q[i], P.A[i]].forEach((v, k) => { const c = g.querySelectorAll('circle')[k]; c.setAttribute('cx', x); c.setAttribute('cy', Y(v)); });
+  t.style.display = ''; t.innerHTML = `<b>${i ? i + '년 후' : '지금'}</b><br>총액 ${man(P.L[i])}<br>오늘 가치 ${man(P.Q[i])}<br>넣은 돈 ${man(P.A[i])}`;
+  const tw = t.offsetWidth; t.style.left = (x + 12 + tw > P.W ? Math.max(0, x - tw - 12) : x + 12) + 'px';
+}
+function pjRender(c){
+  const el = $('usPj'), a = document.activeElement; if (a && a.tagName === 'INPUT' && el.contains(a)) return;
+  const N = Object.assign({y: 30, c: 900, r: 7, h: 0, cur: 'usd'}, PF.proj), w = pjWeights(c);
+  if (!PJ && !pjFail) pjLoad();
+  const key = [w.s, w.n, w.b].map(x => x.toFixed(3)).join();
+  if (PJ && pjMemo.key !== key) pjMemo = {key, usd: pjReturns(PJ, w, 'usd'), krw: pjReturns(PJ, w, 'krw')};
+  const R = PJ ? pjMemo[N.cur] : null, hv = n => R ? pjCagr(R, n) : null, pc = v => (v * 100).toFixed(1) + '%';
+  const useH = N.h && hv(N.h) != null, r = useH ? hv(N.h) : N.r / 100, y = Math.max(1, Math.min(80, Math.round(N.y) || 30)), add = N.c * 1e4;
+  const L = pjPath(c.val, add, r, y), A = L.map((_, i) => c.val + add * i), Q = L.map((v, i) => v / 1.02 ** i), end = L[y];
+  const seg = (k, Ls, on, f) => `<div class="seg" data-k="${k}">${Ls.map(v => `<button type="button" data-n="${v}" aria-pressed="${on(v)}"${f ? f(v) : ' style="white-space:nowrap"'}>${typeof v === 'number' && k === 'r' ? v + '%' : k === 'y' ? v + '년' : k === 'cur' ? (v === 'usd' ? '달러 기준' : '원화 기준') : '최근 ' + v + '년<br><small>' + (hv(v) != null ? pc(hv(v)) : R ? '자료 없음' : '…') + '</small>'}</button>`).join('')}</div>`;
+  const inp = (k, l, v) => `<label class="field"><span>${l}</span><input type="number" step="any" data-k="${k}" value="${v}"></label>`;
+  const rl = R ? pjRoll(R, y) : null, rg = rl ? pjPath(c.val, add, rl.min, y)[y] : null, rx = rl ? pjPath(c.val, add, rl.max, y)[y] : null;
+  const W = Math.max(300, el.clientWidth || 640);
+  pjPts = {L, A, Q, W, ml: 54, mr: 62, top: [1, 2, 2.5, 5, 10].map(x => x * 10 ** Math.floor(Math.log10(Math.max(...L, ...A, 1)))).find(x => x >= Math.max(...L, ...A, 1))};
+  el.innerHTML = `<h3>미래 자산 전망</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 12px;margin-bottom:8px"><div><span class="lbl">기간</span>${seg('y', [10, 20, 30, 40], v => y === v)}</div><div><span class="lbl">수익률 직접 고르기</span>${seg('r', [4, 5, 6, 7, 10], v => !useH && N.r === v)}</div></div>
+    <div style="margin-bottom:8px"><span class="lbl">과거 평균 수익률 쓰기 (지금 비중 기준)</span>${seg('h', [10, 20, 30, 40, 50], v => useH && N.h === v, v => hv(v) == null && R ? ' disabled' : '')}${seg('cur', ['usd', 'krw'], v => N.cur === v)}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:10px">${inp('y', '기간 직접 입력(년)', y)}${inp('c', '매년 추가 납입(만원)', N.c)}${inp('r', '수익률 직접 입력(%)', N.r)}</div>
+    <section class="kpis">${kpi(`${y}년 후 총액`, man(end), `연 ${pc(r)}${useH ? ` · 최근 ${N.h}년 평균` : ''}`)}${kpi('오늘 돈 가치로', man(Q[y]), '물가 연 2% 가정')}${kpi('넣은 돈', man(A[y]), `지금 ${man(c.val)} + 납입 ${man(add * y)}`)}${kpi('불어난 돈', man(end - A[y]), `총액의 ${end ? ((end - A[y]) / end * 100).toFixed(0) : 0}%`)}</section>
+    ${pjChart(L, A, Q, W)}
+    <div class="dv-m"><b>과거 ${y}년 구간이었다면</b> ${rl ? `<div class="dv-r"><span>가장 나빴던 구간 <small>연 ${pc(rl.min)}</small></span><span>${man(rg)}</span></div><div class="dv-r"><span>중간 <small>연 ${pc(rl.med)}</small></span><span>${man(pjPath(c.val, add, rl.med, y)[y])}</span></div><div class="dv-r"><span>가장 좋았던 구간 <small>연 ${pc(rl.max)}</small></span><span>${man(rx)}</span></div><small style="color:var(--muted)">${rl.cnt}개 구간 · ${N.cur === 'usd' ? '달러' : '원화'} 기준</small>` : R ? `<small style="color:var(--muted)"> ${y}년짜리 구간을 만들 만큼 자료가 길지 않습니다.</small>` : pjFail ? '<small style="color:var(--muted)"> 과거 자료를 불러오지 못했습니다.</small>' : '<small style="color:var(--muted)"> 불러오는 중…</small>'}</div>
+    <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">계산 기준</summary><p class="hint" style="margin-top:6px">지금 평가액에 매년 초 납입액을 더하고 같은 수익률로 불린 값입니다. 세금·수수료는 빼지 않았고, 실제 수익률은 해마다 다릅니다. 과거 수익률은 지금 비중(S&amp;P ${(w.s * 100).toFixed(0)}% · 나스닥 ${(w.n * 100).toFixed(0)}% · 채권 ${(w.b * 100).toFixed(0)}%)을 매년 맞췄을 때의 연평균입니다. 배당주·금·기타 종목은 S&amp;P로 계산합니다. 원화 기준은 환율 변화까지 넣은 값이고, 원/달러 자료가 1981년부터라 50년은 없습니다. ETF가 나오기 전은 지수로 이었습니다: S&amp;P는 1993년 전 ^SP500TR, 1988년 전 ^GSPC(배당 빠짐), 나스닥은 1999년 전 ^NDX(배당 빠짐), 1985년 전 나스닥 종합지수(^IXIC), 채권은 2002년 전 10년물 금리입니다. 그래서 오래된 구간은 추정이 섞이고, 과거에 강했던 미국·나스닥이 앞으로도 그렇다는 보장은 없습니다.</p></details>`;
+}
 let usPane = 'div'; try { usPane = localStorage.getItem('us-pane') || 'div'; } catch(e){}
 function paneRender(c){
-  const on = c.H.length > 0, tax = usPane === 'tax', pen = usPane === 'pen';
+  const on = c.H.length > 0, tax = usPane === 'tax', pen = usPane === 'pen', pj = usPane === 'pj';
   $('usPane').style.display = on ? '' : 'none';
   for (const b of $('usPane').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.v === usPane));
-  if (tax || pen) $('usDiv').hidden = true;
+  if (tax || pen || pj) $('usDiv').hidden = true;
+  $('usPj').hidden = !(on && pj);
+  if (on && pj) pjRender(c);
   if (on && tax) taxRender(c);
   if (on && pen) penRender(c);
   $('usTax').hidden = !(on && tax); $('usPen').hidden = !(on && pen);
 }
 $('usPen').addEventListener('click', e => { const b = e.target.closest('.seg button'); if (!b) return; PF.pen = Object.assign({}, PF.pen, {[b.parentNode.dataset.k]: +b.dataset.n}); save(); render(); });
+$('usPj').addEventListener('click', e => { const b = e.target.closest('.seg button'); if (!b || b.disabled) return; const k = b.parentNode.dataset.k, v = k === 'cur' ? b.dataset.n : +b.dataset.n; PF.proj = Object.assign({}, PF.proj, k === 'r' ? {r: v, h: 0} : {[k]: v}); save(); render(); });
+$('usPj').addEventListener('change', e => { const k = e.target.dataset.k, v = +e.target.value; if (!k || !isFinite(v) || (k !== 'r' && v < 0)) return; PF.proj = Object.assign({}, PF.proj, k === 'r' ? {r: v, h: 0} : {[k]: v}); save(); e.target.blur(); render(); });
+$('usPj').addEventListener('pointermove', pjHover); $('usPj').addEventListener('pointerdown', pjHover);
 $('usPen').addEventListener('change', e => { const k = e.target.dataset.k, v = +e.target.value; if (!k || !(v >= 0)) return; PF.pen = Object.assign({}, PF.pen, {[k]: v}); save(); render(); });
 $('usPane').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; usPane = b.dataset.v; try { localStorage.setItem('us-pane', usPane); } catch(err){} render(); });
 $('usDiv').addEventListener('click', e => {
