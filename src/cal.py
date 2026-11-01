@@ -10,11 +10,12 @@ st = {"done": {}}
 today = dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).date().isoformat()
 
 
-def kind(i, l):
+def kind(i, l, sc=None):
     l = l or 0
     if i < 100 or (l < 1 and (i < 500 or i >= 1000)) or (i < 500 and l < 5): return "x"
     if i >= 500 and l >= 15: return "l"
-    if (i >= 500 and l >= 2) or (i >= 1000 and l >= 1) or (i < 500 and l >= 25): return "p"   # 예전 균등은 2026-11-01부터 비례로 합침
+    if (i >= 500 and l >= 2) or (i >= 1000 and l >= 1) or (i < 500 and l >= 25):   # 예전 균등은 2026-11-01부터 비례로 합침
+        return "l" if (sc or 0) >= 80 else "p"   # 비례 중 점수 80점 이상은 대출: 2023-10~2026-10 11건 전부 시초 +49% 이상
     return "c"
 
 
@@ -29,7 +30,7 @@ ro = lambda x: x["open"] / x["price"] - 1
 
 res = []
 for u in D["upcoming"]:
-    k = kind(u["inst"], u.get("lock")) if u.get("inst") is not None else None
+    k = kind(u["inst"], u.get("lock"), u.get("score")) if u.get("inst") is not None else None
     if "스팩" in u["name"] and k not in NAME:
         k = None
     mine = k not in NAME   # 등급 밖 종목은 ★로 골랐을 때만 등록되므로 그 경우의 문구로 만든다
@@ -44,7 +45,7 @@ for u in D["upcoming"]:
     if u["sub"][1] < today or str(u["no"]) in st["done"]:
         continue
     lk = u.get("lock") or 0
-    G = sorted(ro(x) for x in H if kind(x["inst"], x.get("lock")) == k) if k else []
+    G = sorted(ro(x) for x in H if kind(x["inst"], x.get("lock"), x.get("score")) == k) if k else []
     B = sorted(ro(x) for x in H if bk(INST_B, x["inst"]) == bk(INST_B, u["inst"]) and bk(LOCK_B, x.get("lock") or 0) == bk(LOCK_B, lk)) if k else []
     med = B[len(B) // 2] if B else None
     who = "나 + 가족" if FAMILY & set(u["brokers"]) else "나만"
@@ -75,6 +76,6 @@ for u in D["upcoming"]:
                     reminders=[60, 0] if loan else [(end - start).days * 1440 + 380, 0], description="\n".join(lines)))
 # 텔레그램 공모주 알림(Cloudflare 중계 서버)용 요약: 청약·상장이 남은 종목
 KEEP = ("no", "name", "sub", "list", "price", "band", "inst", "lock", "lock0", "score", "score0", "brokers", "refund", "margin", "market")
-up = [dict({k: u.get(k) for k in KEEP}, kind=kind(u["inst"], u.get("lock")) if u.get("inst") is not None else None, spac="스팩" in u["name"])
+up = [dict({k: u.get(k) for k in KEEP}, kind=kind(u["inst"], u.get("lock"), u.get("score")) if u.get("inst") is not None else None, spac="스팩" in u["name"])
       for u in D["upcoming"] if u["sub"][1] >= today or (u.get("list") or "") >= today]
 print(json.dumps({"events": res, "up": up}, ensure_ascii=False))

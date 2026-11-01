@@ -1559,11 +1559,12 @@ function kimpGate(){
     : s + '<b class="down">마통은 김프 매수용으로 비워 두세요.</b> 며칠 안에 −0.5% 매수 신호가 올 확률 50% 이상.';
 }
 setInterval(() => { const h = kimpGate(); document.querySelectorAll('.kg').forEach(e => { if (e.innerHTML !== h) e.innerHTML = h; }); }, 5000);
-function recKind(i, lk){
+function recKind(i, lk, sc){
   if (i < 100 || (lk < 1 && (i < 500 || i >= 1000)) || (i < 500 && lk < 5)) return 'x';
   if (i >= 500 && lk >= 15) return 'l';
   // 예전 균등(기관 500~1,000·확약 2~5%, 기관 100~500·확약 25%↑)은 2026-11-01부터 비례로 합침: 2023-07~2026-10 22건 중 95%가 마통 비례로도 이득
-  if ((i >= 500 && lk >= 2) || (i >= 1000 && lk >= 1) || (i < 500 && lk >= 25)) return 'p';
+  // 등급은 기관·확약으로 정하고(손실 피하기는 이쪽이 낫다), 비례 중 점수 80점 이상만 대출로 올린다: 2023-10~2026-10 11건 전부 시초 +49% 이상, 중앙 +123%
+  if ((i >= 500 && lk >= 2) || (i >= 1000 && lk >= 1) || (i < 500 && lk >= 25)) return sc >= 80 ? 'l' : 'p';
   return 'c';
 }
 function rec(u){
@@ -1579,7 +1580,7 @@ function rec(u){
   let G = HINT.filter(l => l.inst != null && inB(INST_B, l.inst) === bi && inB(LOCK_B, l.lock ?? 0) === bl);
   const rs = G.map(ro).sort((a, b) => a - b), n = rs.length;
   const med = n ? rs[n >> 1] : null, loss = rs.filter(v => v < 0).length;
-  const k = recKind(i, lk);
+  const k = recKind(i, lk, u.score);
   let why = `기관 ${bi[2]} · 확약 ${bl[2]} 구간 과거 ${n}건(개편 전후 합계): 시초 중앙값 <b class="${cls(med)}">${pct(med)}</b>, 공모가 밑 <b>${loss}건</b>.`;
   if (k === 'x') why += ' 손실 비율이 높거나 기대 수익이 작아 청약하지 않는 쪽을 추천합니다.';
   if (k === 'e' || k === 'c') {
@@ -1588,6 +1589,7 @@ function rec(u){
     why += k === 'e' ? ' 기관 수요와 확약이 받쳐 줘서 최소 수량(균등)은 넣는 쪽을 추천합니다.'
       : (i >= 500 ? ' 기관경쟁률은 괜찮지만 확약이 2% 미만이라 상장일 매물이 많을 수 있습니다.' : ' 확약은 있지만 기관경쟁률이 500:1 미만이라 수요가 약합니다.') + ' 개편 후 손실 확률이 40% 안팎이고 중앙값도 한 자릿수라 <b>패스를 권장</b>합니다. 넣는다면 균등 최소 수량만, 시초가에 바로 파세요.';
   }
+  if (k === 'l' && recKind(i, lk) !== 'l') why += ' 기관·확약 기준으로는 비례지만 점수가 80점 이상이라 <b>대출로 올렸습니다</b>(과거 같은 경우 11건 모두 시초 +49% 이상).';
   if ((k === 'p' || k === 'l') && med > 0) {
     const r = med / 100, rf = u.refund || addBiz(u.sub[1], 2);
     const days = Math.round((Date.parse(rf) - Date.parse(u.sub[1])) / 864e5);
@@ -1744,12 +1746,12 @@ function renderStats(){
 
 const RULE_DATE = '2026-11-01';
 const RULE_TXT = {x:'기관 100 미만, 또는 확약 1% 미만(기관 500~1,000 제외), 또는 기관 500 미만·확약 5% 미만', c:'기관 500~1,000·확약 2% 미만, 또는 기관 100~500·확약 5~25%',
-  p:'기관 500 이상·확약 2~15%, 또는 기관 1,000 이상·확약 1~2%, 또는 기관 100~500·확약 25% 이상', l:'기관 500 이상·확약 15% 이상'};
+  p:'기관 500 이상·확약 2~15%, 또는 기관 1,000 이상·확약 1~2%, 또는 기관 100~500·확약 25% 이상', l:'기관 500 이상·확약 15% 이상, 또는 비례 조건에 점수 80점 이상'};
 const GSTAT = {};
 // 등급 배지에 마우스를 올리면 나오는 설명: 왜 이 등급인지 + 같은 등급의 과거 성적
 function recTip(k, i, lk){
   if (k === 'w' || i == null) return '수요예측 결과(기관경쟁률·확약)가 나오면 등급을 매깁니다.';
-  if (!GSTAT[k]) { const G = HINT.filter(l => l.inst != null && recKind(l.inst, l.lock ?? 0) === k); GSTAT[k] = {post: gstat(G.filter(isPost)), pre: gstat(G.filter(l => !isPost(l)))}; }
+  if (!GSTAT[k]) { const G = HINT.filter(l => l.inst != null && recKind(l.inst, l.lock ?? 0, l.score) === k); GSTAT[k] = {post: gstat(G.filter(isPost)), pre: gstat(G.filter(l => !isPost(l)))}; }
   const g = GSTAT[k], act = {l:'여유자금+마통으로 비례 (마감일 김프 +1.5% 이상이면 둘 다, +0.5% 이상이면 마통만)', p:'여유자금으로 비례', e:'균등 최소 수량', c:'패스 권장 (균등 1주 기대값이 수수료 빼면 2천원 안팎)', x:'청약 안 함'}[k];
   return `${REC[k][0]}: 기관 ${won(i)}:1 · 확약 ${(lk ?? 0).toFixed(1)}%\n기준: ${RULE_TXT[k]}\n같은 등급 ${gtxt(g.post, '개편 후')}\n같은 등급 ${gtxt(g.pre, '개편 전')}\n→ ${act}`;
 }
@@ -1757,7 +1759,7 @@ function renderGrade(){
   const H = HINT.filter(l => l.inst != null), Y = addDays(T, -365);
   const f = (L) => { const r = L.map(ro).sort((a, b) => a - b), n = r.length, ls = r.filter(v => v < 0).length; return {n, ls, lp: n ? ls / n * 100 : null, med: n ? r[n >> 1] : null}; };
   $('ipoGrade').innerHTML = ['l','p','c','x'].map(k => {
-    const G = H.filter(l => recKind(l.inst, l.lock ?? 0) === k), a = f(G.filter(l => !isPost(l))), y = f(G.filter(isPost)), z = f(G.filter(l => l.list > RULE_DATE));
+    const G = H.filter(l => recKind(l.inst, l.lock ?? 0, l.score) === k), a = f(G.filter(l => !isPost(l))), y = f(G.filter(isPost)), z = f(G.filter(l => l.list > RULE_DATE));
     const bad = k !== 'x' && y.n >= 5 && y.lp - a.lp >= 15;
     const td = (s) => s.n ? `<td>${s.n}</td><td>${s.lp.toFixed(0)}%</td><td class="${cls(s.med)}">${pct(s.med)}</td>` : '<td>0</td><td>–</td><td>–</td>';
     return `<tr><td style="text-align:left"><span class="rec ${REC[k][1]}">${REC[k][0]}</span></td><td style="font:13.5px var(--font);text-align:left;white-space:normal;min-width:180px">${RULE_TXT[k]}</td>${td(a)}${td(y)}<td>${z.n ? z.ls + '/' + z.n : '–'}</td><td>${bad ? '<b class="up">점검 필요</b>' : '정상'}</td></tr>`;
@@ -1788,7 +1790,7 @@ function renderDone(){
     kpi('평균 시초 수익률', pct(avg(o)), '중앙값 ' + pct(med(o)), cls(avg(o))) +
     kpi('평균 종가 수익률', pct(avg(c)), '중앙값 ' + pct(med(c)), cls(avg(c))) +
     kpi('시초가 공모가 밑', o.filter(v => v < 0).length + '건', `1주당 평균 시초 차익 ${won(gain)}원`);
-  const K = L.map(l => l.inst != null ? recKind(l.inst, l.lock ?? 0) : null);
+  const K = L.map(l => l.inst != null ? recKind(l.inst, l.lock ?? 0, l.score) : null);
   // 적중: 균등·비례·대출은 시초가가 공모가 위, 패스·패스 권장은 시초 +5% 미만(넣을 가치 없음)
   const hit = (k, r) => !k ? '–' : ((k === 'x' || k === 'c') ? r < 5 : r > 0) ? '<b class="up">맞음</b>' : '<b class="down">틀림</b>';
   $('ipoRows').innerHTML = L.map((l, i) => `<tr><td>${l.list}</td><td style="font-family:var(--font);text-align:left">${K[i] ? `<span class="rec ${REC[K[i]][1]}" style="margin-right:6px;cursor:help" data-tip="${esc(recTip(K[i], l.inst, l.lock))}">${REC[K[i]][0]}</span>` : ''}${l.score != null ? scoreTag(l.score).replace('class="sc', 'style="margin-right:6px" class="sc') : ''}${esc(l.name)}</td><td style="font-family:var(--font);text-align:left">${esc(l.brokers.join(', '))}</td>
@@ -1938,7 +1940,7 @@ function renderYt(){
   $('ytNote').innerHTML = `공모주린이 예상은 영상에서 등급 옆에 띄우는 기대 수익률이고, 실제 시초 범위는 그 등급을 받은 종목들이 상장일 시초가에 실제로 얼마였는지입니다(4건 이상이면 가운데 절반, 그 전에는 최저~최고). 예상 적중은 시초 수익률이 예상 범위 안에 든 종목 수입니다. 1주 평균 손익은 균등 1주를 시초가에 팔았을 때입니다. ` +
     (D.length < 20 ? `상장 끝난 종목이 ${D.length}건이라 아직은 우연일 수 있습니다(20건 넘으면 의미가 생깁니다). ` : '') +
     (DS.length >= 3 ? `참고로 같은 ${DS.length}개 종목에서 등급 순서와 시초 수익 순서의 일치도(1에 가까울수록 같음)는 공모주린이 <b>${f(sy)}</b>, 이 사이트 점수 <b>${f(so)}</b>입니다.` : '');
-  $('ytRows').innerHTML = L.map(u => { const R = u.inst != null ? REC[recKind(u.inst, u.lock ?? 0)] : null, v = u.open && u.price ? ret(u) : null;
+  $('ytRows').innerHTML = L.map(u => { const R = u.inst != null ? REC[recKind(u.inst, u.lock ?? 0, u.score)] : null, v = u.open && u.price ? ret(u) : null;
     return `<tr><td style="text-align:left;font-family:var(--font)">${esc(u.name)}</td><td>${ytTag(u.no)}</td>
       <td>${yrTxt(YT[u.no].g)}</td><td style="font-family:var(--font)">${R ? `<span class="rec ${R[1]}" style="margin-right:4px">${R[0]}</span>` : ''}${u.score != null ? u.score + '점' : '–'}</td>
       <td>${u.list ? md(u.list) : '미정'}</td><td class="${cls(v)}">${v == null ? '상장 대기' : pct(v)}</td><td style="font-family:var(--font)">${yHit(YT[u.no].g, v) || '–'}</td></tr>`; }).join('');
