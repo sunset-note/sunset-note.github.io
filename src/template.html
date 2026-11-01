@@ -2458,14 +2458,14 @@ function penRender(c){
   const bal0 = H.reduce((a, p) => a + (p.val || 0), 0), add = (N.a + N.b) * 1e4, r = N.r / 100, base = Math.min(Math.min(N.a, 600) + N.b, 900);
   const nq = H.reduce((a, p) => { const k = exOf(p.sym); return a + (p.val || 0) * (k === 'nq' ? 1 : k === 'nqb' ? .5 : 0); }, 0);
   const ages = [55, 65].filter(x => x > N.age), R = ages.map(x => [x, penCalc(bal0, add, N.age, x, r, N.y)]);
-  const seg = (k, L, u) => `<div class="seg" data-k="${k}">${L.map(v => `<button type="button" data-n="${v}" aria-pressed="${N[k] === v}">${v}${u}</button>`).join('')}</div>`;
+  const seg = (k, L, u) => `<div class="seg" data-k="${k}">${L.map(v => `<button type="button" data-n="${v}" aria-pressed="${N[k] === v}" style="white-space:nowrap">${v}${u}</button>`).join('')}</div>`;
   const inp = (k, l) => `<label class="field"><span>${l}</span><input type="number" min="0" step="1" data-k="${k}" value="${N[k]}"></label>`;
   $('usPen').innerHTML = `<h3>연금 수령액</h3>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:8px">${inp('age', '지금 나이(만)')}${inp('a', '연금저축 연 납입(만원)')}${inp('b', 'IRP 연 납입(만원)')}</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px"><div><span class="lbl">연 수익률 가정</span>${seg('r', [5, 7, 10], '%')}</div><div><span class="lbl">수령 기간</span>${seg('y', [10, 20, 30, 40], '년')}</div></div>
     <section class="kpis">${R.map(([x, v]) => kpi(`${x}세부터 세후 월`, man(v.net), `오늘 가치 ${man(v.today)} · 세전 ${man(v.m)}`)).join('')}` +
-    kpi('연 1,500만원까지', '세금 5.5~3.3%', '넘으면 전액 16.5% 또는 종합과세') +
-    kpi('해마다 돌려받는 세액공제', `${won(base * 1.32e3)}~${won(base * 1.65e3)}원`, `공제 대상 납입 ${base}만원의 13.2~16.5%`) + `</section>
+    kpi('연 1,500만원까지 세율', '5.5~3.3%', '넘으면 전액 16.5% 또는 종합과세') +
+    kpi('해마다 돌려받는 세액공제', `${Math.round(base * .132)}만~${Math.round(base * .165)}만원`, `공제 대상 납입 ${base}만원의 13.2~16.5%`) + `</section>
     ${R.map(([x, v]) => `<div class="dv-m"><b>${x}세부터 ${x + N.y}세까지</b><div class="dv-r"><span>납입 ${v.n}번 뒤 잔액</span><span>${man(v.bal)}</span></div><div class="dv-r"><span>세전 월 수령</span><span>${man(v.m)}</span></div><div class="dv-r"><span>월 세금 <small>${(v.rate * 100).toFixed(1)}%</small></span><span>${man(v.tax)}</span></div><div class="dv-r"><span><b>세후 월 수령</b></span><span><b>${man(v.net)}</b></span></div><div class="dv-r"><span>${N.y}년간 낼 세금</span><span>${man(v.total)}</span></div></div>`).join('') || '<p class="hint">55세·65세가 지난 나이는 계산하지 않습니다.</p>'}
     <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">계산 기준</summary><p class="hint" style="margin-top:6px">지금 연금저축·IRP 평가액 ${man(bal0)}(나스닥 비중 ${bal0 ? (nq / bal0 * 100).toFixed(0) : 0}%)에서 시작해 매년 초 납입하고, 수령을 시작하면 납입을 멈춘다고 봤습니다. 수령 중에도 남은 돈이 같은 수익률로 불어나고, 매달 같은 금액을 받다가 기간이 끝나면 잔액이 0이 됩니다. 죽을 때까지 나오는 종신연금이 아닙니다. 오늘 가치는 물가 연 2%로 환산했고, 전액 세액공제를 받았다고 봤습니다. 연 수령액이 1,500만원을 넘으면 16.5% 분리과세로 계산했고, 다른 소득이 적으면 종합과세가 더 유리할 수 있습니다. 수익률 5·7·10%는 통계가 아닌 가정입니다. 2026년 10월 연금 계좌 비율로 과거 22년을 납입했다면 연 수익률이 달러 기준 11.6~15.4%(5개 구간), 원화 기준 17.1%(2004년 시작 1개 구간)였지만, 표본이 적고 나스닥이 이례적으로 강했던 기간입니다. 32년 납입은 나스닥 ETF 기록이 27년뿐이라 과거 자료로 검증할 수 없습니다. 실제 수익률은 해마다 다르고 수령 직전 폭락이면 표보다 적을 수 있으며, 세법도 바뀔 수 있습니다.</p></details>`;
 }
