@@ -6,6 +6,7 @@ OUT, PREV = sys.argv[1], sys.argv[2]
 VIEW = "https://www.myhome.go.kr/hws/portal/sch/selectRsdtRcritNtcView.do"
 LIST = "https://www.myhome.go.kr/hws/portal/sch/selectRsdtRcritNtcList.do"
 APPLY = "https://www.applyhome.co.kr/ai/aia/selectOtherLttotPblancListView.do"
+DETAIL = "https://www.applyhome.co.kr/ai/aia/selectPRMOLttotPblancDetailView.do"
 UA = "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 Chrome/130 Safari/537.36"
 KST = dt.timezone(dt.timedelta(hours=9))
 
@@ -41,6 +42,17 @@ def fetch():
     return dict(asof=dt.datetime.now(KST).strftime("%Y-%m-%d %H:%M"), items=items)
 
 
+def detail(pb, hm, sec):
+    body = urllib.parse.urlencode(dict(houseManageNo=hm, pblancNo=pb, houseSecd=sec)).encode()
+    time.sleep(1.5)
+    b = urllib.request.urlopen(urllib.request.Request(DETAIL, body, {"User-Agent": UA, "Referer": APPLY}), timeout=25).read().decode("utf-8", "replace")
+    t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<(script|style).*?</\1>", " ", b, flags=re.S))))
+    m = re.search(r"공급위치 (.*?) 공급규모", t)
+    size = re.search(r"전용면적 공급세대수 .*?(?= 공급금액)", t)
+    areas = [float(v) for v in re.findall(r"\b(\d{2,3}\.\d{4})\b", size.group(0))] if size else []
+    return dict(a=m.group(1).strip() if m else "", m=max(areas) if areas else 0)
+
+
 def rental():   # 청약홈 민간임대(공공지원 포함): 마이홈에는 최근 민간임대 공고가 거의 없어 따로 받는다. 제목에 시·동이 없어 권역 공고로 다룬다(w)
     out, today = [], dt.datetime.now(KST).strftime("%Y-%m-%d")
     for p in range(1, 5):
@@ -48,10 +60,14 @@ def rental():   # 청약홈 민간임대(공공지원 포함): 마이홈에는 �
         b = urllib.request.urlopen(urllib.request.Request(APPLY + "?" + q, headers={"User-Agent": UA}), timeout=25).read().decode("utf-8", "replace")
         rows = re.findall(r"<tr[^>]*>\s*<td.*?</tr>", b, re.S)
         for r in rows:
+            key = re.search(r'data-pbno="(\d+)"[^>]*data-hmno="(\d+)"[^>]*data-hsecd="(\w+)"', r)
             c = [html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))).strip() for t in re.findall(r"<td[^>]*>(.*?)</td>", r, re.S)]
             if len(c) < 7 or c[0] not in ("인천", "경기") or "임대" not in c[1]: continue
             end = c[6].split("~")[-1].strip()
-            out.append(dict(n=c[2], s="모집중" if end >= today else "모집완료", d=c[5].replace("-", ""), t=c[1], i=c[3], r=c[0], u=APPLY, w=1))
+            x = dict(n=c[2], s="모집중" if end >= today else "모집완료", d=c[5].replace("-", ""), t=c[1], i=c[3], r=c[0], u=APPLY, w=1)
+            if key and x["s"] != "모집완료" and "공공지원" in x["t"]:   # 제목에 위치·면적이 없어 모집 중인 공고만 상세에서 받는다
+                x.update(detail(*key.groups()))
+            out.append(x)
         if len(rows) < 10: break
         time.sleep(1.5)
     return out
