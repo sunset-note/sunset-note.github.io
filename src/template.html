@@ -2583,9 +2583,9 @@ function pjRender(c){
   el.innerHTML = `<h3>미래 자산</h3>
     <div class="pj-hero"><span class="k">${y}년 후</span><b>${man(end)}</b><span class="s">오늘 돈 가치로 <em>${man(Q[y])}</em> · 연 ${pc(r)}</span><span class="s">넣은 돈 ${man(A[y])} · 불어난 돈 ${man(end - A[y])}</span></div>
     ${pjChart(L, A, Q, W)}
-    <div class="pj-set">${row('기간', seg('y', [10, 20, 30, 40], v => y === v))}${row('연 납입', seg('c', [900, 1500, 2000], v => N.c === v))}${row('수익률', `<div class="seg">${rb('h', 'avg', useH && N.h === 'avg', `과거 평균<br><small>${hv('avg') != null ? pc(hv('avg')) : '…'}</small>`, hv('avg') == null && R)}${rb('h', 'min', useH && N.h === 'min', `과거 최저<br><small>${hv('min') != null ? pc(hv('min')) : '…'}</small>`, hv('min') == null && R)}${[5, 7, 10].map(v => rb('r', v, !useH && N.r === v, v + '%')).join('')}</div>`)}</div>
+    <div class="pj-set">${row('기간', seg('y', [10, 20, 30, 40], v => y === v))}${row('연 납입', seg('c', [900, 1500, 2000], v => N.c === v))}${row('수익률 (평균·최저는 과거 실적)', `<div class="seg">${rb('h', 'avg', useH && N.h === 'avg', `평균<br><small>${hv('avg') != null ? pc(hv('avg')) : '…'}</small>`, hv('avg') == null && R)}${rb('h', 'min', useH && N.h === 'min', `최저<br><small>${hv('min') != null ? pc(hv('min')) : '…'}</small>`, hv('min') == null && R)}${[5, 7, 10].map(v => rb('r', v, !useH && N.r === v, v + '%')).join('')}</div>`)}</div>
     <details style="margin-top:12px" ${dt('more')}><summary class="lbl" style="cursor:pointer">설정 더 보기</summary><div class="pj-set" style="margin-top:8px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px">${inp('y', '기간(년)', y)}${inp('c', '연 납입(만원)', N.c)}${inp('r', '수익률(%)', N.r)}${inp('i', '물가(%)', +(inf * 100).toFixed(2))}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">${inp('y', '기간(년)', y)}${inp('c', '연 납입(만원)', N.c)}${inp('r', '수익률(%)', N.r)}${inp('i', '물가(%)', +(inf * 100).toFixed(2))}</div>
       ${row('과거 수익률 기준 통화', seg('cur', ['usd', 'krw'], v => N.cur === v))}
       ${row('최근 N년 평균 수익률', seg('h', [10, 20, 30, 40, 50], v => useH && N.h === v, v => hv(v) == null && R ? ' disabled' : ''))}
       ${row('물가 (한국 최근 평균)', seg('ih', [10, 20, 30, 40, 50], v => N.ih === v, () => ''))}
