@@ -639,6 +639,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   </header>
   <section class="card" style="margin-bottom:18px">
     <div class="kc-top"><h2>내 미국주식 포트폴리오</h2><p class="hint">기록은 이 기기의 브라우저에만 저장됩니다. 국내 상장 ETF는 종목코드 6자리(예: 360750)로 넣으세요.</p></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><div class="seg" id="usCur" style="min-width:130px"><button type="button" data-v="krw">원화</button><button type="button" data-v="usd">달러</button></div></div>
     <section class="kpis" id="usKpis"></section>
     <div id="usAlloc" style="margin:12px 0 4px"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:8px"><div class="seg" id="usSort" style="min-width:250px"><button type="button" data-v="val">평가액순</button><button type="button" data-v="acct">계좌별</button><button type="button" data-v="idx">지수별</button></div></div>
@@ -2244,6 +2245,8 @@ const cls = v => v > 0 ? 'up' : v < 0 ? 'down' : '';
 const isKR = s => /\.(KS|KQ)$/.test(s);
 const nameOf = s => PF.names[s] || s;
 let VIEW = 'val'; try { VIEW = localStorage.getItem('us-view') || 'val'; } catch(e){}
+let CUR = 'krw'; try { CUR = localStorage.getItem('us-cur') || 'krw'; } catch(e){}
+const usd = v => v == null || !isFinite(v) ? '–' : (v < 0 ? '-' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
 const COLORS = ['#e0559c','#7a5af8','#1f9d6b','#f08a24','#0ea5b7','#b7791f','#5d9bff','#9a93a0','#d9343a','#2e8b57'];
 
 const Q = {};   // 종목 → {px, prev, cur, name, at}
@@ -2298,16 +2301,19 @@ function calc(){
       if (p.qty < 1e-9) { p.qty = 0; p.cost = 0; p.costN = 0; } }
   }
   const H = Object.values(pos).filter(p => p.qty > 0);
-  let val = 0, cost = 0, fxPnl = 0, day = 0, have = true;
+  let val = 0, cost = 0, fxPnl = 0, day = 0, valU = 0, costU = 0, dayU = 0, have = true;
   for (const p of H) {
     const q = Q[p.sym], kr = isKR(p.sym), f = kr ? 1 : FX;
     p.px = q ? q.px : null; p.val = q && f ? p.qty * q.px * f : null;
     if (p.val == null) { have = false; continue; }
     p.pnl = p.val - p.cost; val += p.val; cost += p.cost;
+    // 달러 기준: 달러 종목은 달러 그대로(환율 효과 없음), 국내 상장 ETF는 원화 금액을 지금 환율로 나눈다
+    p.valU = kr ? (FX ? p.val / FX : null) : p.qty * q.px; p.costU = kr ? (FX ? p.cost / FX : null) : p.costN; p.pnlU = p.valU - p.costU; valU += p.valU; costU += p.costU;
+    if (q.prev) dayU += kr ? (FX ? p.qty * (q.px - q.prev) / FX : 0) : p.qty * (q.px - q.prev);
     if (!kr) { const avgFx = p.cost / p.costN; fxPnl += p.qty * q.px * (FX - avgFx); }
     if (q.prev) day += kr ? p.qty * (q.px - q.prev) : p.qty * (q.px * FX - q.prev * (fxPrev || FX));
   }
-  return {H, val, cost, realized, fxPnl, day, have};
+  return {H, val, cost, realized, fxPnl, day, valU, costU, dayU, have};
 }
 // 백테스터용 비중: 평가액(없으면 매수 금액) 기준, 국내 상장 ETF는 같은 지수의 미국 ETF로 바꾼다(채권 혼합형은 S&P500·나스닥100 50 + 미국채 IEF 50)
 window.usPfWeights = () => {
@@ -2327,33 +2333,41 @@ function kpi(k, v, s, c=''){ return `<div class="kpi"><span class="k">${k}</span
 function render(){
   const c = calc(), pnl = c.val - c.cost;
   const byAcct = {}; for (const p of c.H) byAcct[p.acct] = (byAcct[p.acct] || 0) + (p.val || 0);
-  $('usKpis').innerHTML = c.H.length ?
+  const U = CUR === 'usd' && FX > 0, sU = v => (v >= 0 ? '+' : '') + usd(v), pnlU = c.valU - c.costU;
+  const byAcctU = {}; for (const p of c.H) byAcctU[p.acct] = (byAcctU[p.acct] || 0) + (p.valU || 0);
+  $('usKpis').innerHTML = !c.H.length ? kpi('평가액', '–', '아래에서 매수 기록을 추가하세요') + kpi('평가손익', '–', '') + kpi('그중 환차손익', '–', '') + kpi('오늘 변동', '–', '')
+    : U ?
+    kpi('평가액', usd(c.valU), Object.entries(byAcctU).map(([a, v]) => `${a} ${usd(v)}`).join(' · ')) +
+    kpi('평가손익', sU(pnlU), `원금 ${usd(c.costU)} · ${pct(c.costU ? pnlU / c.costU : null)}`, cls(pnlU)) +
+    kpi('적용 환율', FX.toFixed(1), '달러 종목 손익은 환율 효과 제외 · 국내 상장 ETF만 이 환율로 환산') +
+    kpi('오늘 변동', sU(c.dayU), `원금 대비 ${pct(c.costU ? c.dayU / c.costU : null)} · 실현손익 ${sU(c.realized / FX)}`, cls(c.dayU))
+    :
     kpi('평가액', man(c.val), Object.entries(byAcct).map(([a, v]) => `${a} ${man(v)}`).join(' · ')) +
     kpi('평가손익', sgn(pnl) + man(pnl), `원금 ${man(c.cost)} · ${pct(c.cost ? pnl / c.cost : null)}`, cls(pnl)) +
     kpi('그중 환차손익', sgn(c.fxPnl) + man(c.fxPnl), FX ? `달러 종목 · 지금 환율 ${FX.toFixed(1)}` : '환율 대기', cls(c.fxPnl)) +
-    kpi('오늘 변동', sgn(c.day) + man(c.day), `원금 대비 ${pct(c.cost ? c.day / c.cost : null)} · 실현손익 ${sgn(c.realized) + man(c.realized)}`, cls(c.day))
-    : kpi('평가액', '–', '아래에서 매수 기록을 추가하세요') + kpi('평가손익', '–', '') + kpi('그중 환차손익', '–', '') + kpi('오늘 변동', '–', '');
+    kpi('오늘 변동', sgn(c.day) + man(c.day), `원금 대비 ${pct(c.cost ? c.day / c.cost : null)} · 실현손익 ${sgn(c.realized) + man(c.realized)}`, cls(c.day));
   const H = c.H.slice().sort((a, b) => (b.val || 0) - (a.val || 0));
   $('usAlloc').innerHTML = c.val > 0 ? `<div class="us-bar">${H.map((p, i) => `<span style="width:${(p.val / c.val * 100).toFixed(2)}%;background:${COLORS[i % COLORS.length]}" title="${esc(nameOf(p.sym))}"></span>`).join('')}</div>
     <div class="us-leg">${H.map((p, i) => `<span><i style="background:${COLORS[i % COLORS.length]}"></i>${esc(nameOf(p.sym))} ${(p.val / c.val * 100).toFixed(1)}%</span>`).join('')}</div>` : '';
-  const row = p => { const kr = isKR(p.sym), u = kr ? '' : '$', avg = p.costN / p.qty;
+  const row = p => { const kr = isKR(p.sym), u = kr ? '' : '$', avg = p.costN / p.qty, pl = U ? p.pnlU : p.pnl, cs = U ? p.costU : p.cost, has = p.pnl != null;
     return `<tr tabindex="0" data-acct="${esc(p.acct)}" data-sym="${esc(p.sym)}"><td style="font-family:var(--font)${VIEW === 'acct' ? ';color:transparent' : ''}">${esc(p.acct)}</td><td style="text-align:left;font-family:var(--font)"><b>${esc(p.sym.replace(/\.(KS|KQ)$/, ''))}</b> <small class="hint">${esc(nameOf(p.sym))}</small></td>
       <td>${(+p.qty.toFixed(4)).toLocaleString('ko-KR')}</td><td>${u}${kr ? won(avg) : avg.toFixed(2)}</td><td>${p.px == null ? '–' : u + (kr ? won(p.px) : p.px.toFixed(2))}</td>
-      <td>${won(p.val)}</td><td class="${cls(p.pnl)}">${p.pnl == null ? '–' : sgn(p.pnl) + won(p.pnl)}</td><td class="${cls(p.pnl)}">${p.pnl == null ? '–' : pct(p.pnl / p.cost)}</td><td>${c.val && p.val ? (p.val / c.val * 100).toFixed(1) + '%' : '–'}</td></tr>`; };
+      <td>${U ? usd(p.valU) : won(p.val)}</td><td class="${cls(pl)}">${!has ? '–' : U ? sU(pl) : sgn(pl) + won(pl)}</td><td class="${cls(pl)}">${!has ? '–' : pct(pl / cs)}</td><td>${c.val && p.val ? (p.val / c.val * 100).toFixed(1) + '%' : '–'}</td></tr>`; };
   let body = '';
   if (VIEW === 'val') body = H.map(row).join('');
   else {   // 계좌별·지수별: 묶음마다 소계 줄
     const G = new Map();
     for (const p of H) { const k = VIEW === 'acct' ? p.acct : (EXN[exOf(p.sym)] || '기타'); if (!G.has(k)) G.set(k, []); G.get(k).push(p); }
     body = [...G.entries()].sort((a, b) => b[1].reduce((s, p) => s + (p.val || 0), 0) - a[1].reduce((s, p) => s + (p.val || 0), 0)).map(([k, L]) => {
-      const v = L.reduce((s, p) => s + (p.val || 0), 0), cst = L.reduce((s, p) => s + p.cost, 0), pl = v - cst;
-      return `<tr class="us-sub"><td colspan="5" style="text-align:left">${esc(k)} <small class="hint">${L.length}종목</small></td><td>${won(v)}</td><td class="${cls(pl)}">${sgn(pl) + won(pl)}</td><td class="${cls(pl)}">${pct(cst ? pl / cst : null)}</td><td>${c.val ? (v / c.val * 100).toFixed(1) + '%' : '–'}</td></tr>` + L.map(row).join('');
+      const v = L.reduce((s, p) => s + (p.val || 0), 0), cst = L.reduce((s, p) => s + p.cost, 0), vU = L.reduce((s, p) => s + (p.valU || 0), 0), cU = L.reduce((s, p) => s + (p.costU || 0), 0), pl = U ? vU - cU : v - cst, cs = U ? cU : cst;
+      return `<tr class="us-sub"><td colspan="5" style="text-align:left">${esc(k)} <small class="hint">${L.length}종목</small></td><td>${U ? usd(vU) : won(v)}</td><td class="${cls(pl)}">${U ? sU(pl) : sgn(pl) + won(pl)}</td><td class="${cls(pl)}">${pct(cs ? pl / cs : null)}</td><td>${c.val ? (v / c.val * 100).toFixed(1) + '%' : '–'}</td></tr>` + L.map(row).join('');
     }).join('');
   }
   $('usHold').innerHTML = H.length ? body
     : `<tr><td colspan="9" style="text-align:center;font-family:var(--font);color:var(--muted);padding:14px">보유 종목이 없습니다.</td></tr>`;
   $('usHoldTip').hidden = !H.length;
   for (const b of $('usSort').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.v === VIEW));
+  for (const b of $('usCur').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.v === CUR));
   evalRender(c);
   divRender(c);
   paneRender(c);
@@ -2672,6 +2686,7 @@ async function evBacktest(w){
       + ' 배당·금·기타 종목은 S&P500으로 대신 계산했습니다.';
   } catch(e) { $('evBt').innerHTML = '<tr><td colspan="4" style="text-align:center;font-family:var(--font);color:var(--muted)">과거 시세를 받지 못했습니다.</td></tr>'; evKey = ''; }
 }
+$('usCur').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; CUR = b.dataset.v; try { localStorage.setItem('us-cur', CUR); } catch(err){} render(); });
 $('usSort').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; VIEW = b.dataset.v; try { localStorage.setItem('us-view', VIEW); } catch(err){} render(); });
 function pxLabel(){ const s = $('usSym').value.trim(); $('usPxL').textContent = /^\d{6}$/.test(s) || /\.(KS|KQ)$/i.test(s) ? '단가 (원)' : '단가 ($)'; }
 $('usSym').addEventListener('input', pxLabel);
