@@ -349,12 +349,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 <div class="wrap" id="tab-kimp">
   <header>
     <div>
-      <h1>테더 김프 백테스터</h1>
-      <p class="sub">김프가 낮을 때 테더(USDT)를 사고 높을 때 파는 전략을 검증합니다. 일봉은 2017년부터(테더 상장 전은 비트김프로 대체), 1시간봉은 2024년부터이고, 1시간봉에서는 달러선물 거래시간에만 매매하도록 제한할 수 있습니다.</p>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">
-      <span class="chip">데이터 기준일 <b id="endDate"></b></span>
-      <span class="chip" id="corrChip">테더·비트 김프 상관계수 <b id="corr"></b></span>
+      <h1>테더 김프</h1>
     </div>
   </header>
 
@@ -398,6 +393,10 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="presets" style="margin-top:10px"><button type="button" id="pfExport">백업 코드 복사</button><button type="button" id="pfImport">백업 코드 불러오기</button></div>
   </section>
 
+  <section class="card" style="margin-bottom:18px">
+    <div class="kc-top"><h2>테더 김프 백테스터</h2><p class="hint">김프가 낮을 때 테더(USDT)를 사고 높을 때 파는 전략을 검증합니다. 일봉은 2017년부터(테더 상장 전은 비트김프로 대체), 1시간봉은 2024년부터이고, 1시간봉에서는 달러선물 거래시간에만 매매하도록 제한할 수 있습니다.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">데이터 기준일 <b id="endDate"></b></span> <span class="chip" id="corrChip">테더·비트 김프 상관계수 <b id="corr"></b></span></div>
+  </section>
   <div class="grid">
     <aside>
       <div class="grp"><span class="lbl">거래소</span>
@@ -632,10 +631,8 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 <div class="wrap" id="tab-etf" hidden>
   <header>
     <div>
-      <h1>미국 ETF 백테스터</h1>
-      <p class="sub">종목과 비중을 정해 과거에 투자했다면 어땠는지 봅니다. 배당은 재투자(수정주가), 세금·수수료는 빼지 않습니다. 원화 기준을 고르면 원달러 환율 변화까지 반영합니다.</p>
+      <h1>미국 ETF</h1>
     </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">시세 <b>야후 일봉</b></span></div>
   </header>
   <section class="card" style="margin-bottom:18px">
     <div class="kc-top"><h2>내 미국주식 포트폴리오</h2><p class="hint">기록은 이 기기의 브라우저에만 저장됩니다. 국내 상장 ETF는 종목코드 6자리(예: 360750)로 넣으세요.</p></div>
@@ -679,6 +676,10 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
         <p class="hint" id="evBtNote" style="margin-top:6px"></p></div>
     </div>
     <div style="margin-top:14px"><span class="lbl">할 일</span><ol class="prio" id="evTodo" style="margin-top:6px;font-size:15px;line-height:1.6"></ol></div>
+  </section>
+  <section class="card" style="margin-bottom:18px">
+    <div class="kc-top"><h2>미국 ETF 백테스터</h2><p class="hint">종목과 비중을 정해 과거에 투자했다면 어땠는지 봅니다. 배당은 재투자(수정주가), 세금·수수료는 빼지 않습니다. 원화 기준을 고르면 원달러 환율 변화까지 반영합니다.</p></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">시세 <b>야후 일봉</b></span></div>
   </section>
   <div class="grid">
     <aside>
