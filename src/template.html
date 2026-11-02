@@ -355,13 +355,6 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 </div>
 
 <div class="wrap" id="tab-kimp">
-  <header>
-    <div>
-      <h1>테더 김프 전략</h1>
-      <p class="sub">김프가 낮을 때 테더(USDT)를 사고 높을 때 파는 전략입니다. 지금 김프와 내 매매 기록, 과거 데이터로 검증한 결과를 봅니다.</p>
-    </div>
-  </header>
-
   <section class="card" style="margin-bottom:18px">
     <div class="kc-top">
       <h2>테더 김프 차트</h2>
@@ -560,19 +553,13 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 </div>
 
 <div class="wrap" id="tab-ipo" hidden>
-  <header>
-    <div>
-      <h1>공모주</h1>
-      <p class="sub">청약 일정과 상장 결과, 가족 계좌별 청약 가능 여부를 한 번에 봅니다. 일정과 시초가·종가는 38커뮤니케이션 자료를 매일 아침 받아옵니다.</p>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">자료 기준 <b id="ipoAsof"></b></span></div>
-  </header>
   <main>
     <section class="card">
       <div class="cal-top"><h2>공모주 캘린더</h2><div class="cal-nav"><button type="button" id="calPrev" aria-label="이전 달">‹</button><span id="calMon"></span><button type="button" id="calNext" aria-label="다음 달">›</button></div></div>
       <div class="cal-hd"><div class="h">일</div><div class="h">월</div><div class="h">화</div><div class="h">수</div><div class="h">목</div><div class="h">금</div><div class="h">토</div></div>
       <div id="ipoCal"></div>
       <div class="cal-legend"><span><i class="ev-f"></i>수요예측</span><span><i class="ev-s"></i>청약</span><span><i class="ev-r"></i>환불</span><span><i class="ev-l"></i>상장</span></div>
+      <p class="hint" style="margin-top:8px">자료 기준 <b id="ipoAsof"></b> · 일정과 시초가·종가는 38커뮤니케이션 자료입니다.</p>
       <div class="day-list" id="ipoDay"></div>
     </section>
     <section class="card">
@@ -638,11 +625,6 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 </div>
 
 <div class="wrap" id="tab-etf" hidden>
-  <header>
-    <div>
-      <h1>미국 ETF</h1>
-    </div>
-  </header>
   <section class="card" style="margin-bottom:18px">
     <div class="kc-top"><h2>내 미국주식 포트폴리오</h2><p class="hint">기록은 이 기기의 브라우저에만 저장됩니다. 국내 상장 ETF는 종목코드 6자리(예: 360750)로 넣으세요.</p></div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><div class="seg" id="usCur" style="min-width:130px"><button type="button" data-v="krw">원화</button><button type="button" data-v="usd">달러</button></div></div>
