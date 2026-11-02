@@ -2331,7 +2331,7 @@ function render(){
     kpi('평가액', man(c.val), Object.entries(byAcct).map(([a, v]) => `${a} ${man(v)}`).join(' · ')) +
     kpi('평가손익', sgn(pnl) + man(pnl), `원금 ${man(c.cost)} · ${pct(c.cost ? pnl / c.cost : null)}`, cls(pnl)) +
     kpi('그중 환차손익', sgn(c.fxPnl) + man(c.fxPnl), FX ? `달러 종목 · 지금 환율 ${FX.toFixed(1)}` : '환율 대기', cls(c.fxPnl)) +
-    kpi('오늘 변동', sgn(c.day) + man(c.day), `실현손익 ${sgn(c.realized) + man(c.realized)}`, cls(c.day))
+    kpi('오늘 변동', sgn(c.day) + man(c.day), `원금 대비 ${pct(c.cost ? c.day / c.cost : null)} · 실현손익 ${sgn(c.realized) + man(c.realized)}`, cls(c.day))
     : kpi('평가액', '–', '아래에서 매수 기록을 추가하세요') + kpi('평가손익', '–', '') + kpi('그중 환차손익', '–', '') + kpi('오늘 변동', '–', '');
   const H = c.H.slice().sort((a, b) => (b.val || 0) - (a.val || 0));
   $('usAlloc').innerHTML = c.val > 0 ? `<div class="us-bar">${H.map((p, i) => `<span style="width:${(p.val / c.val * 100).toFixed(2)}%;background:${COLORS[i % COLORS.length]}" title="${esc(nameOf(p.sym))}"></span>`).join('')}</div>
