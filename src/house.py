@@ -65,7 +65,7 @@ def rental():   # 청약홈 민간임대(공공지원 포함): 마이홈에는 �
             if len(c) < 7 or c[0] not in ("인천", "경기") or "임대" not in c[1]: continue
             end = c[6].split("~")[-1].strip()
             x = dict(n=c[2], s="모집중" if end >= today else "모집완료", d=c[5].replace("-", ""), t=c[1], i=c[3], r=c[0], u=APPLY, w=1)
-            if key and x["s"] != "모집완료" and "공공지원" in x["t"]:   # 제목에 위치·면적이 없어 모집 중인 공고만 상세에서 받는다
+            if key and x["s"] != "모집완료":   # 제목에 위치·면적이 없어 모집 중인 공고만 상세에서 받는다
                 x.update(detail(*key.groups()))
             out.append(x)
         if len(rows) < 10: break
