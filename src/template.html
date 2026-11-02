@@ -299,6 +299,8 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .sync-btn .dot.on{background:#1fae6b}
 #evTodo li{margin:6px 0}
 #evTodo b{color:var(--ink)}
+#usHold tr[data-sym]{cursor:pointer}
+#usHold tr[data-sym]:hover td,#usHold tr[data-sym]:focus-visible td{background:var(--soft)}
 #usHold tr.us-sub td{background:var(--soft);font-family:var(--mono);font-weight:700;padding-top:9px;padding-bottom:9px}
 #usHold tr.us-sub td:first-child{font-family:var(--font);border-radius:8px 0 0 8px}
 #usHold tr.us-sub td:last-child{border-radius:0 8px 8px 0}
@@ -643,6 +645,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="tablewrap" style="margin-top:6px;max-height:none">
       <table><thead><tr><th>계좌</th><th style="text-align:left">종목</th><th>수량</th><th>평균 단가</th><th>현재가</th><th>평가액</th><th>손익</th><th>수익률</th><th>비중</th></tr></thead><tbody id="usHold"></tbody></table>
     </div>
+    <p class="hint" id="usHoldTip" style="margin-top:6px" hidden>종목을 누르면 오늘 날짜로 추가 매수 칸이 채워집니다.</p>
     <div class="seg" id="usPane" style="margin-top:16px;max-width:480px;display:none"><button type="button" data-v="div">배당</button><button type="button" data-v="tax">세금</button><button type="button" data-v="pen">연금</button><button type="button" data-v="pj">미래 자산</button></div>
     <div class="dv" id="usDiv" hidden></div>
     <div class="dv" id="usTax" hidden></div>
@@ -2334,7 +2337,7 @@ function render(){
   $('usAlloc').innerHTML = c.val > 0 ? `<div class="us-bar">${H.map((p, i) => `<span style="width:${(p.val / c.val * 100).toFixed(2)}%;background:${COLORS[i % COLORS.length]}" title="${esc(nameOf(p.sym))}"></span>`).join('')}</div>
     <div class="us-leg">${H.map((p, i) => `<span><i style="background:${COLORS[i % COLORS.length]}"></i>${esc(nameOf(p.sym))} ${(p.val / c.val * 100).toFixed(1)}%</span>`).join('')}</div>` : '';
   const row = p => { const kr = isKR(p.sym), u = kr ? '' : '$', avg = p.costN / p.qty;
-    return `<tr><td style="font-family:var(--font)${VIEW === 'acct' ? ';color:transparent' : ''}">${esc(p.acct)}</td><td style="text-align:left;font-family:var(--font)"><b>${esc(p.sym.replace(/\.(KS|KQ)$/, ''))}</b> <small class="hint">${esc(nameOf(p.sym))}</small></td>
+    return `<tr tabindex="0" data-acct="${esc(p.acct)}" data-sym="${esc(p.sym)}"><td style="font-family:var(--font)${VIEW === 'acct' ? ';color:transparent' : ''}">${esc(p.acct)}</td><td style="text-align:left;font-family:var(--font)"><b>${esc(p.sym.replace(/\.(KS|KQ)$/, ''))}</b> <small class="hint">${esc(nameOf(p.sym))}</small></td>
       <td>${(+p.qty.toFixed(4)).toLocaleString('ko-KR')}</td><td>${u}${kr ? won(avg) : avg.toFixed(2)}</td><td>${p.px == null ? '–' : u + (kr ? won(p.px) : p.px.toFixed(2))}</td>
       <td>${won(p.val)}</td><td class="${cls(p.pnl)}">${p.pnl == null ? '–' : sgn(p.pnl) + won(p.pnl)}</td><td class="${cls(p.pnl)}">${p.pnl == null ? '–' : pct(p.pnl / p.cost)}</td><td>${c.val && p.val ? (p.val / c.val * 100).toFixed(1) + '%' : '–'}</td></tr>`; };
   let body = '';
@@ -2349,6 +2352,7 @@ function render(){
   }
   $('usHold').innerHTML = H.length ? body
     : `<tr><td colspan="9" style="text-align:center;font-family:var(--font);color:var(--muted);padding:14px">보유 종목이 없습니다.</td></tr>`;
+  $('usHoldTip').hidden = !H.length;
   for (const b of $('usSort').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.v === VIEW));
   evalRender(c);
   divRender(c);
@@ -2686,6 +2690,17 @@ $('usForm').addEventListener('submit', async e => {
     $('usQty').value = ''; $('usPx').value = ''; $('usFx').value = '';
   } catch(err) { $('usHint').textContent = err.message; }
 });
+// 보유 종목을 누르면 추가 매수 칸을 채운다: 오늘 날짜·그 계좌·그 종목·현재가, 수량만 넣으면 된다
+function pickHold(tr){
+  const sym = tr.dataset.sym, acct = tr.dataset.acct, code = sym.replace(/\.(KS|KQ)$/, ''), q = Q[sym];
+  const sel = $('usAcct'); if (![...sel.options].some(o => o.value === acct)) sel.add(new Option(acct));
+  sel.value = acct; $('usSide').value = 'buy'; $('usD').value = today(); $('usSym').value = code; $('usFx').value = '';
+  $('usPx').value = q ? q.px : ''; $('usQty').value = ''; pxLabel();
+  $('usHint').textContent = `${nameOf(sym)} (${code}) 추가 매수: 수량만 넣으세요.${q ? ' 단가는 현재가로 채웠으니 체결가가 다르면 고쳐 주세요.' : ''}`;
+  $('usForm').scrollIntoView({block: 'center', behavior: 'smooth'}); $('usQty').focus({preventScroll: true});
+}
+$('usHold').addEventListener('click', e => { const tr = e.target.closest('tr[data-sym]'); if (tr) pickHold(tr); });
+$('usHold').addEventListener('keydown', e => { const tr = e.target.closest('tr[data-sym]'); if (tr && e.key === 'Enter') pickHold(tr); });
 $('usRows').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b || !confirm('이 기록을 삭제할까요?')) return;
   PF.trades = PF.trades.filter(t => t.id !== b.dataset.id); save(); render(); });
 $('usExport').addEventListener('click', async () => {
