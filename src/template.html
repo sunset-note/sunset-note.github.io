@@ -299,6 +299,14 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .sync-btn .dot.on{background:#1fae6b}
 #evTodo li{margin:6px 0}
 #evTodo b{color:var(--ink)}
+.hs-list{display:flex;flex-direction:column;gap:6px}
+.hs-r{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none;background:var(--panel)}
+.hs-r:hover{background:var(--soft)}
+.hs-r b{display:block;font:600 14.5px/1.4 var(--font);margin:4px 0 2px;overflow-wrap:anywhere}
+.hs-r small{display:block;font-size:13px;line-height:1.45;color:var(--muted)}
+.hs-t{display:inline-block;font:600 12px var(--font);padding:2px 7px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.hs-t.g{background:color-mix(in srgb,#1f9d6b 16%,var(--panel));color:#157a52}
+.hs-e{padding:12px;text-align:center;color:var(--muted);font-size:14px}
 #usHold tr[data-sym]{cursor:pointer}
 #usHold tr[data-sym]:hover td,#usHold tr[data-sym]:focus-visible td{background:var(--soft)}
 #usHold tr.us-sub td{background:var(--soft);font-family:var(--mono);font-weight:700;padding-top:9px;padding-bottom:9px}
@@ -337,7 +345,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <span class="tk time" id="tkTime">연결 중…</span>
 </div></div>
 
-<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
+<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#house" data-tab="house" id="houseTab" style="display:none">임대주택</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
 <div class="wrap" id="syncPanel" hidden style="padding-block:12px 0">
   <section class="card">
     <div class="head"><h2>기기 연동 (컴퓨터 ↔ 폰)</h2><p class="hint" id="syncState"></p></div>
@@ -628,6 +636,26 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   </main>
 </div>
 
+<div class="wrap" id="tab-house" hidden>
+  <header><div><h1>임대주택</h1></div></header>
+  <section class="card" style="margin-bottom:18px">
+    <div class="kc-top"><h2>모집 중</h2><p class="hint" id="hsNote"></p></div>
+    <details id="hsPrefBox" style="margin:0 0 10px"><summary class="lbl" style="cursor:pointer">내 조건</summary>
+      <form class="pf-form" id="hsPref" style="margin-top:10px">
+        <label class="field wide"><span>볼 동네 (쉼표로 구분)</span><input type="text" id="hsIn" placeholder="동네·시 이름"></label>
+        <label class="field wide"><span>뺄 지역 (쉼표로 구분)</span><input type="text" id="hsOut" placeholder="제외할 지역 이름"></label>
+        <label class="field"><span>세전 연소득</span><select id="hsInc"><option value="">미입력</option><option value="1">3,000만원 미만</option><option value="2">3,000~5,000만원</option><option value="3">5,000~7,000만원</option><option value="4">7,000만원 이상</option></select></label>
+        <label class="field"><span>지금 행복주택 거주</span><select id="hsHh"><option value="">아니오</option><option value="1">예</option></select></label>
+      </form>
+      <p class="hint">이 조건은 기기 연동 기록에만 저장되고 페이지와 GitHub에는 올라가지 않습니다.</p>
+    </details>
+    <div class="hs-list" id="hsNow"></div>
+    <details style="margin-top:12px"><summary class="lbl" style="cursor:pointer">최근 마감 (<span id="hsPastN">0</span>건) · 다음 공고 시기 참고</summary><div class="hs-list" id="hsPast" style="margin-top:8px"></div></details>
+    <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">조건에 안 맞아 뺀 공고 (<span id="hsOffN">0</span>건)</summary><div class="hs-list" id="hsOff" style="margin-top:8px"></div></details>
+    <details style="margin-top:8px"><summary class="lbl" style="cursor:pointer">판정 기준</summary><p class="hint" style="margin-top:6px">공고 제목과 유형만 보고 자동으로 나눈 것이라 실제 자격은 공고문으로 확인해야 합니다. 든든전세는 소득·자산 제한이 없는 유형으로 소개되지만 공고마다 다를 수 있습니다. 공공지원 민간임대는 일반공급 조건을 공고문에서 봐야 합니다. 행복주택은 같은 계층으로 다시 입주하는 것이 원칙적으로 제한됩니다. 영구·국민·매입임대는 연소득 5,000만원 이상이면 소득 기준을 넘을 가능성이 높아 뺐고, 자격 완화 공고는 남겨 둡니다. 자료는 마이홈포털과 청약홈 민간임대이고, 두 곳에 없는 SH·GH·iH 공고는 나오지 않을 수 있습니다. 청약홈 민간임대는 제목에 시·동이 없어 인천·경기 전체가 권역 공고로 나옵니다.</p></details>
+    <p class="hint" style="margin-top:12px">공무원임대주택은 여기 공고에 없어서 <a href="https://www.geps.or.kr/bizInformation_housingBiz_rentalAPT_rentalHouseInfo_operationMethod" target="_blank" rel="noopener">공무원연금공단 안내</a>에서 따로 봐야 합니다.</p>
+  </section>
+</div>
 <div class="wrap" id="tab-etf" hidden>
   <header>
     <div>
@@ -1438,6 +1466,8 @@ kcUI(); buildKC();
 // ---- 탭 ----
 (function(){
 const tabs = [...document.querySelectorAll('#tabs a')];
+// 임대주택 탭은 내 조건을 쓰는 탭이라 연동한 기기에만 메뉴를 보여 준다
+try { if (localStorage.getItem('sync-id') !== null) document.getElementById('houseTab').style.display = ''; } catch(e){}
 function show(name){
   if (!document.getElementById('tab-' + name)) name = 'kimp';
   for (const a of tabs) {
@@ -1448,6 +1478,7 @@ function show(name){
   try { localStorage.setItem('tab', name); } catch(e){}
   if (name === 'kimp' && window.kimpRebuild) requestAnimationFrame(window.kimpRebuild);
   if (name === 'etf' && window.etfShow) requestAnimationFrame(window.etfShow);
+  if (name === 'house' && window.houseShow) window.houseShow();
 }
 let first = location.hash.slice(1);
 if (first.startsWith('setup=')) first = 'ipo';
@@ -2739,12 +2770,68 @@ document.addEventListener('visibilitychange', () => { if (on && !document.hidden
 if (!document.getElementById('tab-etf').hidden) window.etfShow();
 })();
 </script>
+<script id="housedata" type="application/json">__HOUSE__</script>
+<script>
+// ---- 임대주택: 공개 공고를 내 조건(기기 연동 기록)으로 거른다 ----
+(function(){
+const $ = id => document.getElementById(id);
+let H = {asof: '', items: []}; try { H = JSON.parse($('housedata').textContent); } catch(e){}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const K = 'house-pref';
+const pref = () => { try { return JSON.parse(localStorage.getItem(K)) || {}; } catch(e){ return {}; } };
+const words = s => (s || '').split(/[,\s]+/).map(w => w.trim()).filter(Boolean);
+const active = x => x.s !== '모집완료';
+// 제목과 유형으로 판정: good 가능성 있음, check 공고 확인, off 뺌
+function verdict(x, P){
+  const n = x.n, t = x.t, high = +P.inc >= 3;
+  if (/신혼|신생아|다자녀|고령자|장애|한부모|대학생|기숙사|수급/.test(n)) return ['off', '1인 가구 대상이 아닌 공고'];
+  if (/든든전세/.test(n)) return ['good', '소득·자산 제한 없는 유형으로 소개됨, 공고문 확인'];
+  if (/공공지원/.test(t)) return ['good', '일반공급 조건 공고문 확인'];
+  if (/자격\s*완화|소득\s*\d+%\s*완화/.test(n) && !/행복/.test(t)) return ['check', '자격 완화 공고, 소득 기준 확인'];
+  if (/행복/.test(t)) return P.hh ? ['off', '같은 계층 재입주 원칙적 제한'] : high ? ['off', '소득 기준 초과 가능성 높음'] : ['check', '소득 기준 확인'];
+  if (/영구|국민|다가구|전세임대|매입/.test(t + n) && high) return ['off', '소득 기준 초과 가능성 높음'];
+  return ['check', '자격 공고문 확인'];
+}
+// 동네: 뺄 지역이 제목에 있으면 제외, 볼 동네가 있으면 그 공고와 권역 공고만
+function place(x, P){
+  const I = words(P.in), O = words(P.out);
+  if (O.some(w => x.n.includes(w))) return 'no';
+  if (!I.length || I.some(w => x.n.includes(w))) return 'yes';
+  return x.w || /본부|경기북부|경기남부|전국/.test(x.n) ? 'wide' : 'no';
+}
+const row = (x, tag, why) => `<a class="hs-r" href="${esc(x.u)}" target="_blank" rel="noopener"><span class="hs-t ${tag === 'good' ? 'g' : ''}">${tag === 'good' ? '가능성 있음' : tag === 'check' ? '공고 확인' : '제외'}</span><b>${esc(x.n)}</b><small>${esc(x.t)} · ${esc(x.i)} · ${x.d ? x.d.slice(4, 6) + '.' + x.d.slice(6, 8) + ' 공고' : ''} · ${esc(why)}</small></a>`;
+function render(){
+  const P = pref(), now = [], past = [], off = [], old = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10).replace(/-/g, '');
+  if (document.activeElement !== $('hsIn')) $('hsIn').value = P.in || '';
+  if (document.activeElement !== $('hsOut')) $('hsOut').value = P.out || '';
+  $('hsInc').value = P.inc || ''; $('hsHh').value = P.hh ? '1' : '';
+  $('hsPrefBox').open = !P.in;
+  for (const x of H.items) {
+    const pl = place(x, P), [v, why0] = verdict(x, P), why = pl === 'wide' ? why0 + ' · 권역 공고, 우리 동네 포함 여부 확인' : why0;
+    if (pl === 'no') { if (active(x)) off.push(row(x, 'off', '다른 지역')); continue; }
+    if (v === 'off') { if (active(x)) off.push(row(x, 'off', why)); continue; }
+    if (active(x)) now.push([v, row(x, v, why)]); else if (x.d >= old) past.push([v, row(x, v, why)]);
+  }
+  const order = L => L.sort((a, b) => (a[0] === 'good' ? 0 : 1) - (b[0] === 'good' ? 0 : 1)).map(r => r[1]).join('');
+  $('hsNow').innerHTML = order(now) || `<div class="hs-e">지금 조건에 맞는 모집 공고가 없습니다.</div>`;
+  $('hsPast').innerHTML = past.map(r => r[1]).join('') || `<div class="hs-e">없음</div>`; $('hsPastN').textContent = past.length;
+  $('hsOff').innerHTML = off.join('') || `<div class="hs-e">없음</div>`; $('hsOffN').textContent = off.length;
+  $('hsNote').textContent = H.asof ? `인천·경기 공고 · ${H.asof} 기준 · 마이홈포털·청약홈` : '공고를 받지 못했습니다.';
+}
+$('hsPref').addEventListener('submit', e => e.preventDefault());
+const save = () => { const P = {in: $('hsIn').value.trim(), out: $('hsOut').value.trim(), inc: $('hsInc').value, hh: $('hsHh').value === '1'}; try { localStorage.setItem(K, JSON.stringify(P)); } catch(e){} const o = $('hsPrefBox').open; render(); $('hsPrefBox').open = o; };
+for (const id of ['hsIn', 'hsOut']) $(id).addEventListener('change', save);
+for (const id of ['hsInc', 'hsHh']) $(id).addEventListener('change', save);
+window.houseShow = render;
+if (!$('tab-house').hidden) render();
+})();
+</script>
 <script>
 // ---- 기기 연동: 지정한 기록들을 중계 서버(KV)에 연동 키로 저장하고, 다른 기기는 같은 키로 받아온다 ----
 (function(){
 const $ = id => document.getElementById(id);
 const PROXY = 'https://sunset-fx.ghlckd01.workers.dev';
-const KEYS = ['kimp-pf1', 'us-pf1', 'ipo-acc2', 'ipo-res1'];
+const KEYS = ['kimp-pf1', 'us-pf1', 'ipo-acc2', 'ipo-res1', 'house-pref'];
 const LS = window.localStorage, rawSet = Storage.prototype.setItem;
 const get = k => { try { return LS.getItem(k); } catch(e) { return null; } };
 const put = (k, v) => { try { rawSet.call(LS, k, v); } catch(e) {} };
