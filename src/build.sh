@@ -12,7 +12,8 @@ python3 -I "$S/build.py" raw.json kimp.json "$END"
 python3 -I "$S/fetch_h.py" rawh.json
 python3 -I "$S/build_h.py" rawh.json kimp.json all.json
 python3 -I "$S/ipo.py" ipo.json
-python3 -I "$S/house.py" house.json "$R/index.html"
+# 임대주택 공고는 공고 사이트가 해외 서버를 막아 맥에서 받아 올린 house.json을 쓴다(src/house.py)
+cp "$R/house.json" house.json 2>/dev/null || echo '{"asof":"","items":[]}' > house.json
 # 미국 ETF 백테스터용 2004년 이전 원/달러(FRED DEXKOUS). 실패하면 빈 배열
 curl -s -m 60 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXKOUS" > fred.csv || true
 python3 -I -c "
