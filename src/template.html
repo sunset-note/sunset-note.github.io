@@ -559,7 +559,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       <div class="cal-hd"><div class="h">일</div><div class="h">월</div><div class="h">화</div><div class="h">수</div><div class="h">목</div><div class="h">금</div><div class="h">토</div></div>
       <div id="ipoCal"></div>
       <div class="cal-legend"><span><i class="ev-f"></i>수요예측</span><span><i class="ev-s"></i>청약</span><span><i class="ev-r"></i>환불</span><span><i class="ev-l"></i>상장</span></div>
-      <p class="hint" style="margin-top:8px">자료 기준 <b id="ipoAsof"></b> · 일정과 시초가·종가는 38커뮤니케이션 자료입니다.</p>
+      <p class="hint" style="margin-top:8px">자료 기준 <b id="ipoAsof"></b><span id="ipoLive2"></span> · 일정과 시초가·종가는 38커뮤니케이션 자료입니다.</p>
       <div class="day-list" id="ipoDay"></div>
     </section>
     <section class="card">
@@ -1511,7 +1511,7 @@ const done = all.filter(l => l.list >= addDays(T, -365));
 const upcoming = IPO.upcoming.filter(u => u.sub[1] >= T || (u.list && u.list >= T));
 const BK = {};
 for (const l of done) { if (isSpac(l.name)) continue;
-  for (const b of l.brokers) { const o = BK[b] || (BK[b] = {n:0, o:0, c:0, up:0}); o.n++; o.o += (l.open/l.price-1)*100; o.c += (l.close/l.price-1)*100; } }
+  for (const b of l.brokers) { const o = BK[b] || (BK[b] = {n:0, o:0, c:0, up:0}); o.n++; o.o += (l.open/l.price-1)*100; o.c += ((l.close ?? l.open)/l.price-1)*100; } }
 for (const u of upcoming) { if (isSpac(u.name) || u.sub[1] < T) continue;
   for (const b of u.brokers) (BK[b] || (BK[b] = {n:0, o:0, c:0, up:0})).up++; }
 const score = b => BK[b] ? BK[b].n + BK[b].up : 0;
@@ -1798,9 +1798,9 @@ function status(u){
 function kpi(k, v, s, c=''){ return `<div class="kpi"><span class="k">${k}</span><span class="v ${c}">${v}</span><span class="s">${s}</span></div>`; }
 function renderDone(){
   const L = done.filter(l => ACC.spac === '1' || !isSpac(l.name));
-  const o = L.map(l => (l.open/l.price-1)*100), c = L.map(l => (l.close/l.price-1)*100);
-  const avg = a => a.length ? a.reduce((x,y) => x+y, 0) / a.length : null;
-  const med = a => { if (!a.length) return null; const s = a.slice().sort((x,y) => x-y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1]+s[m])/2; };
+  const o = L.map(l => (l.open/l.price-1)*100), c = L.map(l => l.close != null ? (l.close/l.price-1)*100 : null);   // 상장 당일 장중에는 종가가 없다
+  const avg = a0 => { const a = a0.filter(v => v != null); return a.length ? a.reduce((x,y) => x+y, 0) / a.length : null; };
+  const med = a0 => { const a = a0.filter(v => v != null); if (!a.length) return null; const s = a.slice().sort((x,y) => x-y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m-1]+s[m])/2; };
   const gain = avg(L.map(l => l.open - l.price));
   $('ipoKpis').innerHTML =
     kpi('상장 건수', L.length + '건', `${L[L.length-1]?.list || ''} ~ ${L[0]?.list || ''}`) +
@@ -2002,6 +2002,30 @@ segUI(); renderUp(); renderDone(); renderStats(); renderGrade(); renderScore(); 
     const now = new Date(Date.now() + 9 * 3600e3).toISOString().slice(11, 16);
     $('ipoLive').textContent = `· 수요예측 실시간 반영 ${now}` + (changed.size ? ` (${changed.size}종목 새로 반영)` : '');
   } catch(e) { $('ipoLive').textContent = '· 수요예측 실시간 반영 실패, ' + IPO.asof.slice(5) + ' 기준'; }
+})();
+// 상장 결과 실시간 반영: 예약 빌드가 밀려도 페이지를 열 때 38 신규상장 표(중계 서버 5분 캐시)에서 시초가·종가를 받아 덮어쓴다
+(async () => {
+  const num = s => { const v = parseFloat(String(s || '').replace(/[^\d.\-]/g, '')); return isFinite(v) ? v : null; };
+  try {
+    const r = await fetch('https://sunset-fx.ghlckd01.workers.dev/f38/index.htm?o=nw&page=1'); if (!r.ok) throw new Error(r.status);
+    const doc = new DOMParser().parseFromString(new TextDecoder('euc-kr').decode(await r.arrayBuffer()), 'text/html');
+    const kst = new Date(Date.now() + 9 * 3600e3).toISOString(), day = kst.slice(0, 10), hm = kst.slice(11, 16);
+    let n = 0;
+    for (const tr of doc.querySelectorAll('tr')) {
+      const td = [...tr.children].filter(c => c.tagName === 'TD'), a = tr.querySelector('a[href*="no="]');
+      if (td.length < 9 || !a) continue;
+      const m = a.getAttribute('href').match(/no=(\d+)/); if (!m) continue;
+      const t = td.map(c => c.textContent.replace(/\s+/g, ' ').trim()), no = +m[1], open = num(t[6]), price = num(t[4]), ld = t[1].replace(/\//g, '-');
+      const close = ld === day && hm < '15:30' ? null : num(t[8]);   // 장중에는 현재가가 들어올 수 있어 15:30 전에는 종가로 쓰지 않는다
+      if (!open || !price) continue;
+      const us = IPO.upcoming.concat(IPO.listed).filter(u => u.no === no); if (!us.length) continue;
+      for (const u of us) if (u.open !== open || (close != null && u.close !== close)) { u.open = open; u.price = price; if (close != null) u.close = close; n++; }
+      let l = IPO.listed.find(u => u.no === no); if (!l) { l = us[0]; l.list = ld; IPO.listed.unshift(l); }
+      if (!done.includes(l)) { done.unshift(l); all.unshift(l); }
+    }
+    if (n) { renderUp(); renderDone(); renderRes(); renderYt(); }
+    $('ipoLive2').textContent = ` · 상장 결과 ${hm} 확인`;
+  } catch(e) { $('ipoLive2').textContent = ' · 상장 결과 실시간 확인 실패'; }
 })();
 })();
 </script>
