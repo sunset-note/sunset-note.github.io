@@ -2993,7 +2993,8 @@ function render(){
   $('earnRows').innerHTML = rows.map(({x, label, it, y, eff}, i) => {
     const py = n => it.p ? amt * it.p[n] / 100 : y;   // 매시간 변동 상품: 하루는 지금 금리, 일주일·한 달은 지난 7·30일 평균
     const tags = [it.w ? '신규 전용' : '', it.v ? 'VIP 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
-    const sub = [tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a>` : ''].filter(Boolean).join(' · ');
+    const pay = it.l ? (x === 'binance' ? '' : '만기 지급') : ({binance: '하루마다 지급', okx: '매시간 지급', bybit: '하루마다 지급', bitget: '매시간 지급', gate: '매시간 지급'})[x];
+    const sub = [pay, tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a>` : ''].filter(Boolean).join(' · ');
     const shown = Math.abs(it.a - eff) >= .01 ? `<small>표시 ${it.a}%</small>` : '';
     return `<div class="er${i === 0 ? ' er-top' : ''}"><div class="er-head"><div><div class="er-name">${exI(x)}${esc(label)}<em>${esc(it.c)} · ${esc(it.n)}</em> ${tags}</div><div class="er-sub">${sub}</div></div><div class="er-rate">${eff.toFixed(2)}%${shown}</div></div><div class="er-int"><small>하루</small>${usd(py(0) / 365)}</div><div class="er-int"><small>일주일</small>${usd(py(1) * 7 / 365)}</div><div class="er-int"><small>한 달</small>${usd(py(2) * 30 / 365)}</div></div>`;
   }).join('') || '<p class="hint">조건에 맞는 상품이 없습니다.</p>';
