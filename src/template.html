@@ -2948,7 +2948,7 @@ function renderEv(){
     const tags = (e.cd || []).map(c => `<span class="tag">${esc(c)}</span>`).join(' ');
     return `<div class="ev"><h3><span class="tag">${kind}</span> ${esc(lab)} · <a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.ti)}</a></h3><p class="ev-m">${KST(e.end)} 끝 · ${left(e.end)}${coins}${e.rw ? ' · 총 보상 ' + esc(e.rw) : ''} ${tags}</p>${pools}</div>`;
   }).join('') || '<p class="hint">조건에 맞는 이벤트가 없습니다.</p>';
-  $('evNote').textContent = '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트는 자료가 막혀 있어 아직 빠져 있습니다.';
+  $('evNote').textContent = '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트 런치풀은 자료가 막혀 있어 빠져 있고, OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 이벤트만 보입니다.';
 }
 function header(){
   const now = Date.now() / 1000, ats = Object.values(DATA).map(v => v.at);
