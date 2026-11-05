@@ -53,9 +53,10 @@ def okx():
                 time.sleep(.2)
         if rows:
             v = [float(x['lendingRate']) * 100 for x in rows[:720]]
-            d1 = v[:24]
-            a = sum(v) / len(v)
-            out.append(dict(c=c, n='심플 언 자유', a=pct(a), t=[[None, pct(a)]], l=0, o=f'변동 금리, {len(v) // 24}일 평균 (지난 24시간 {sum(d1) / len(d1):.2f}%)'))
+            avg = lambda n: pct(sum(v[:n]) / len(v[:n]))
+            now_r = pct(v[0])
+            # 매시간 바뀌는 금리: 지금 금리와 지난 1·7·30일 평균
+            out.append(dict(c=c, n='심플 언 자유', a=now_r, t=[[None, now_r]], l=0, o=f'매시간 변동 · 1일 {avg(24)}%, 7일 {avg(168)}%, 30일 {avg(720)}%', p=[now_r, avg(168), avg(720)]))
         time.sleep(.2)
     for cur in get('https://www.okx.com/priapi/v1/earn/simple-earn/all-products?limit=200&offset=0&type=all')['data']['allProducts']['currencies']:
         c = cur['investCurrency']['currencyName']
