@@ -2927,12 +2927,31 @@ function header(){
   $('earnAt').textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 기준, 매시간 갱신${old.length ? ` · ${old.join(', ')} 자료는 오래됨` : ''}`;
   $('earnEx').innerHTML = Object.entries(DATA).map(([x, v]) => `<button type="button" data-x="${esc(x)}" aria-pressed="true">${esc(v.label)}</button>`).join('');
 }
+// 바이비트는 해외 서버(GitHub)를 막지만 이 사이트에서 브라우저로 부르는 것은 허용해서, 보는 기기에서 바로 받는다
+async function bybit(){
+  const items = [];
+  for (const [cat, label] of [['FlexibleSaving', '이지 언 자유'], ['OnChain', '온체인 언']]) {
+    const r = await fetch('https://api.bybit.com/v5/earn/product?category=' + cat);
+    if (!r.ok) return;
+    const COINS = new Set(Object.values(DATA).flatMap(v => v.items.map(i => i.c)));
+    for (const x of (await r.json()).result.list) {
+      if (!COINS.has(x.coin) || x.status !== 'Available') continue;
+      const P = t => parseFloat(t);
+      const t = (x.tierAprDetails || []).map(o => [o.max === '-1' ? null : +o.max, P(o.estimateApr)]);
+      if (!t.length) t.push([null, P(x.estimateApr)]);
+      const days = +x.term || 0;
+      items.push({c: x.coin, n: label + (days ? ` ${days}일` : ''), a: Math.max(...t.map(q => q[1])), t: t.map(q => [q[0], +q[1].toFixed(2)]), l: days, e: cat === 'OnChain', o: x.swapCoin ? `${x.swapCoin}로 바꿔 운용` : ''});
+    }
+  }
+  if (items.length) { DATA.bybit = {at: Date.now() / 1000, label: '바이비트', items}; const was = [...off]; header(); for (const b of $('earnEx').children) b.setAttribute('aria-pressed', String(!was.includes(b.dataset.x))); render(); }
+}
 async function load(){
   if (DATA) return;
   try {
     const r = await fetch('earn.json?t=' + Math.floor(Date.now() / 600000));
     if (!r.ok) throw new Error(r.status);
     DATA = await r.json(); header(); render();
+    await bybit();
   } catch(e) { $('earnAt').textContent = '금리 자료를 불러오지 못했습니다.'; }
 }
 $('earnAmt').addEventListener('input', () => { set('earn-amt', $('earnAmt').value); render(); });
