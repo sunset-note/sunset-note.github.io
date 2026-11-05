@@ -2991,7 +2991,7 @@ function render(){
   rows.sort((a, b) => b.eff - a.eff || b.it.a - a.it.a);
   $('earnRows').innerHTML = rows.map(({x, label, it, y, eff}, i) => {
     const py = n => it.p ? amt * it.p[n] / 100 : y;   // 매시간 변동 상품: 하루는 지금 금리, 일주일·한 달은 지난 7·30일 평균
-    const tags = [it.w ? '신규 전용' : '', it.v ? 'VIP 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
+    const tags = [it.w ? '신규 전용' : '', it.v ? 'VIP 전용' : '', it.e ? '온체인' : '', it.q ? '가입 가능 여부 미확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
     const pay = it.l ? (x === 'binance' ? '' : '만기 지급') : ({binance: '하루마다 지급', okx: '매시간 지급', bybit: '하루마다 지급', bitget: '매시간 지급', gate: '매시간 지급'})[x];
     const sub = [pay, tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a>` : ''].filter(Boolean).join(' · ');
     const shown = Math.abs(it.a - eff) >= .01 ? `<small>표시 ${it.a}%</small>` : '';
