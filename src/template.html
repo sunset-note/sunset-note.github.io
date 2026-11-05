@@ -2998,7 +2998,7 @@ function header(){
   const now = Date.now() / 1000, ats = Object.values(DATA).map(v => v.at);
   const d = new Date(Math.max(...ats) * 1000);
   const old = Object.values(DATA).filter(v => now - v.at > 6 * 3600).map(v => v.label);
-  $('earnAt').textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 기준, 매시간 갱신${old.length ? ` · ${old.join(', ')} 자료는 오래됨` : ''}`;
+  $('earnAt').textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 기준${old.length ? ` · ${old.join(', ')} 자료는 오래됨` : ''}`;
   $('earnEx').innerHTML = Object.entries(DATA).map(([x, v]) => `<button type="button" data-x="${esc(x)}" aria-pressed="true">${esc(v.label)}</button>`).join('');
 }
 // 바이비트는 해외 서버(GitHub)를 막지만 이 사이트에서 브라우저로 부르는 것은 허용해서, 보는 기기에서 바로 받는다
