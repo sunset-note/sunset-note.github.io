@@ -3016,8 +3016,8 @@ function renderEv(){
     const amt = parseFloat((rw[0] || '').replace(/,/g, ''));
     const s = e.start, a = D(e.end), b = s ? D(s) : null, span = s ? Math.round((e.end - s) / 86400) : null;
     const pct = s ? Math.min(100, Math.max(0, Math.round((now - s) / (e.end - s) * 100))) : null;
-    const rows = (e.pools || []).length ? `<div class="lp-tw"><table><thead><tr><th>예치 자산</th><th>예상 APR</th><th>공식 APR</th><th>총 보상</th><th>총 예치</th><th>1인 한도</th></tr></thead><tbody>${e.pools.map(p => `<tr><td><span class="lp-mini">${esc(p.c.slice(0, 2))}</span>${esc(p.c)}${p.v ? ' <span class="tag">VIP</span>' : ''}</td><td class="lp-exp">${p.exp == null ? '-' : p.exp + '%'}</td><td>${p.ap}%</td><td>${short(p.rew)}</td><td>${short(p.st)}</td><td>${short(p.cap)}</td></tr>`).join('')}</tbody></table></div>`
-      : `<p class="lp-empty">${(e.c || []).length ? `예치 자산 ${e.c.map(esc).join(', ')}` : '선택 자산 보유'} · APR과 예치액은 공지에서 확인하세요.${(e.cd || []).length ? ' ' + e.cd.map(esc).join(', ') : ''}</p>`;
+    const rows = (e.pools || []).length ? `<div class="lp-tw"><table><thead><tr><th>예치 자산</th><th>예상 APR</th><th>공식 APR</th><th>총 보상</th><th>총 예치</th><th>1인 한도</th></tr></thead><tbody>${e.pools.map(p => `<tr><td><span class="lp-mini">${esc(p.c.slice(0, 2))}</span>${esc(p.c)}${p.v ? ' <span class="tag">VIP</span>' : ''}</td><td class="lp-exp">${p.exp == null ? '-' : p.exp + '%'}</td><td>${p.ap}%</td><td>${p.rew == null ? '-' : short(p.rew)}</td><td>${short(p.st)}</td><td>${p.cap ? short(p.cap) : '-'}</td></tr>`).join('')}</tbody></table></div>${(e.cd || []).length ? `<p class="lp-empty" style="margin-top:8px">${e.cd.map(esc).join(', ')}</p>` : ''}`
+      : `<p class="lp-empty">선택 자산 보유 행사예요. 수치는 로그인해야 보여서 여기에는 나오지 않습니다. 보기를 눌러 확인하세요.${(e.cd || []).length ? ' ' + e.cd.map(esc).join(', ') : ''}</p>`;
     return `<div class="lp"><div class="lp-h"><div class="lp-av">${esc(rc.slice(0, 3))}${exI(e.x, 'ex-b')}</div><div class="lp-tt"><b>${esc(rc)}</b><em>${exI(e.x)}${esc(lab)}</em><small>${b ? `${b.y}.${b.m}.${b.d} – ${a.m}.${a.d} · ${span}일` : `~ ${a.y}.${a.m}.${a.d}`}</small></div><div class="lp-air"><small>총 에어드랍</small><b>${isFinite(amt) ? short(amt) + ' ' : ''}${esc(rc)}</b></div><a class="lp-go" href="${esc(e.url)}" target="_blank" rel="noopener">보기</a></div><div class="lp-prog"><div class="lp-pl"><b>${left(e.end)}</b><span>${pct == null ? '' : pct + '% 경과 · '}${a.m}.${a.d} ${a.h}:${a.n} 마감</span></div><div class="lp-bar"><i style="width:${pct == null ? 0 : pct}%"></i></div></div>${rows}</div>`;
   };
   $('evList').className = wantPool ? 'lp-list' : 'ev-list';
@@ -3028,7 +3028,7 @@ function renderEv(){
     const tags = (e.cd || []).map(c => `<span class="tag">${esc(c)}</span>`).join('');
     return `<div class="ev"><div class="ev-top"><h3>${exI(e.x)}${esc(lab)} · ${what}</h3><span class="ev-d">${left(e.end)}</span></div><p class="ev-m">${KST(e.end)} 끝${e.rw ? ' · 총 보상 ' + esc(e.rw) : ''} · <a href="${esc(e.url)}" target="_blank" rel="noopener">공지 원문</a></p>${tags ? `<div class="ev-tags">${tags}</div>` : ''}</div>`;
   }).join('') || '<p class="hint">조건에 맞는 이벤트가 없습니다.</p>';
-  $('evNote').textContent = wantPool ? '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트 런치풀은 자료가 막혀 있어 빠져 있습니다.' : 'OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 이벤트만 보입니다. 비트겟과 게이트는 예치 이벤트 공지 자료가 없어 빠져 있습니다.';
+  $('evNote').textContent = '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트는 풀별 보상이 자료에 없어 공식 APR만 표시합니다.';
 }
 function setView(v){
   view = v;

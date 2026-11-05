@@ -283,6 +283,21 @@ def ev_flash(now):
         out.append(dict(x='okx', src='okxflash', k='pool', ti=f"{rw['currencyName']} Flash Earn", rc=rw['currencyName'], rw=f"{float(rw['totalRewardAmount']):,.0f} {rw['currencyName']}", c=[q['c'] for q in pools], end=end, start=start, cd=['VIP 우대'] if p.get('isVip') else [], url='https://www.okx.com/flash-earn', pools=pools))
     return out
 
+def ev_gate(now):
+    # 게이트 공식 공개 API. 풀별 보상 수량은 자료에 없어 공식 APR만 쓴다
+    out = []
+    for p in get('https://api.gateio.ws/api/v4/launch/project-list'):
+        if p.get('project_state') != 1 or p['end_timest'] <= now:
+            continue
+        pools, cd = [], []
+        for r in p['reward_pools']:
+            ap = float(r['rate_year'])
+            pools.append(dict(c=r['coin'], ap=ap, exp=None, rew=None, st=float(r['already_buy_total_amount']), cap=float(r['personal_max_amount'] or 0), v=False))
+            if r.get('limit_rule') == 3 and '순입금 조건' not in cd:   # 게이트 화면의 Net Deposit 표시
+                cd.append('순입금 조건')
+        out.append(dict(x='gate', k='pool', ti=f"{p['name']} Launchpool", rc=p['name'], rw=f"{float(p['total_amount']):,.0f} {p['name']}", c=[q['c'] for q in pools], end=p['end_timest'], start=p['start_timest'], cd=cd, url='https://www.gate.com/launchpool', pools=pools))
+    return out
+
 def ev_bitget(now):
     # PoolX(런치풀): status 2가 진행 중
     d = get('https://www.bitget.com/v1/finance/poolx/product/page/list/new', {'pre': '0', 'pageNo': 1, 'pageSize': 20, 'status': 2})['data']['items']
@@ -303,7 +318,7 @@ def ev_bitget(now):
 
 def events(old, cache, now):
     res = []
-    for name, fn in (('binance', lambda: ev_binance(now, cache)), ('okx', lambda: ev_okx(now)), ('okxflash', lambda: ev_flash(now)), ('bitget', lambda: ev_bitget(now))):
+    for name, fn in (('binance', lambda: ev_binance(now, cache)), ('okx', lambda: ev_okx(now)), ('okxflash', lambda: ev_flash(now)), ('bitget', lambda: ev_bitget(now)), ('gate', lambda: ev_gate(now))):
         try:
             v = fn()
             if name == 'binance':
