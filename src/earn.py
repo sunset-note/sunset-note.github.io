@@ -1,6 +1,6 @@
 # 거래소 예치 상품 수집: 바이낸스·OKX·바이비트·비트겟·게이트의 스테이블코인 상품을 키 없이 받아 earn.json으로 합친다.
 # 거래소 하나가 실패하면 그 거래소만 지난번 값을 유지한다(at에 마지막 성공 시각).
-import json, sys, time, urllib.request
+import calendar, html, json, re, sys, time, urllib.request
 
 COINS = ['USDT', 'USDC', 'USD1', 'RLUSD', 'FDUSD', 'USDE', 'USDG', 'USDGO', 'USDD', 'PYUSD', 'DAI', 'U', 'BFUSD', 'RWUSD']
 UA = {'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'}
@@ -130,6 +130,169 @@ def gate():
             time.sleep(.2)
     return out
 
+# ---- 이벤트 공지: 종료일과 조건 ----
+MONTH = {m: i + 1 for i, m in enumerate('January February March April May June July August September October November December'.split())}
+DATE = r'(?:\d{4}-\d\d-\d\d(?:[ T]\d\d:\d\d(?::\d\d)?)?|\d{1,2} [A-Z][a-z]+ \d{4}(?:, *\d\d:\d\d)?|[A-Z][a-z]+ \d{1,2}, \d{4}(?:,? *\d\d:\d\d)?)'
+PERIOD = re.compile(r'[Pp]eriod:? *(' + DATE + r')[^0-9]{0,20}?(?:to|–|-|—)[^0-9]{0,6}(' + DATE + r')')
+
+def stamp(t):
+    m = re.match(r'(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d))?', t)
+    if m:
+        y, mo, d, h, mi = m.groups()
+    else:
+        m = re.match(r'(\d{1,2}) ([A-Z][a-z]+) (\d{4})(?:, *(\d\d):(\d\d))?', t)
+        if m and m.group(2) in MONTH:
+            d, mo, y, h, mi = m.groups()
+        else:
+            m = re.match(r'([A-Z][a-z]+) (\d{1,2}), (\d{4})(?:,? *(\d\d):(\d\d))?', t)
+            if not m or m.group(1) not in MONTH:
+                return None
+            mo, d, y, h, mi = m.groups()
+        mo = MONTH[mo]
+    return calendar.timegm((int(y), int(mo), int(d), int(h or 23), int(mi or 59), 59))
+
+def ends(text, now=None):
+    now = now or time.time()
+    # 공지 맨 앞의 기간이 본 행사다. 뒤쪽 부대 행사나 주간 구간에 끌려가지 않게 앞에서부터 본다
+    v = [x for x in (stamp(b) for _, b in PERIOD.findall(text)) if x and x > now]
+    return v[0] if v else None
+
+def conds(title, text):
+    both = title + ' ' + text
+    out = []
+    if re.search(r'new users?\b|newly registered', both, re.I):
+        out.append('신규 전용' if re.search(r'new users?', title, re.I) else '신규 혜택 있음')
+    if re.search(r'holding VIP status|VIP users? only|VIP-only|exclusive(?:ly)? (?:to|for) VIP', both, re.I):
+        out.append('VIP 전용')
+    elif 'VIP' in both:
+        out.append('VIP 우대')
+    if re.search(r'net deposit', both, re.I):
+        out.append('순입금 조건')
+    if re.search(r'trading volume', text, re.I):
+        out.append('거래량 조건')
+    m = re.search(r'(?:hold(?: minimally| at least)?|minimum (?:holding|balance) of) ([\d,]{4,}) (?:USDT|USDC|USD)', text, re.I)
+    if m:
+        out.append(f'최소 {m.group(1)} 보유')
+    if re.search(r'first[- ]come', text, re.I):
+        out.append('선착순')
+    return out
+
+def strip(h):
+    return re.sub(r'\s+', ' ', html.unescape(re.sub(r'<script.*?</script>|<style.*?</style>|<[^>]+>', ' ', h, flags=re.S)))
+
+def nodes(n, o):
+    if isinstance(n, dict):
+        if n.get('node') == 'text':
+            o.append(n.get('text', ''))
+        for c in n.get('child', []):
+            nodes(c, o)
+    return o
+
+def coins_in(t):
+    return [c for c in COINS if re.search(r'(?<![A-Za-z0-9])' + c + r'(?![A-Za-z0-9])', t)]
+
+def bn_live(keep, now):
+    out = []
+    for v in keep.values():
+        fut = [x for x in v.get('ends', []) if x > now]
+        if fut and v['c']:
+            e = {k: w for k, w in v.items() if k != 'ends'}
+            e['end'] = fut[0]
+            out.append(e)
+    return out
+
+def ev_binance(now, cache):
+    # 공지 본문은 한 번만 읽고 결과를 저장한다(요청이 많으면 429로 막힌다)
+    base = 'https://www.binance.com/bapi/composite/v1/public/cms/article'
+    skip = re.compile(r'referral|p2p|cashback|leaderboard|tournament|learn |brazil|latam|cis |mena|loan|\btrade\b', re.I)
+    keep = {}
+    for page in (1, 2, 3):
+        for a in get(f'{base}/list/query?type=1&pageNo={page}&pageSize=50&catalogId=93')['data']['catalogs'][0]['articles']:
+            t = a['title']
+            if now - a['releaseDate'] / 1000 > 60 * 86400 or skip.search(t) or not re.search(r'earn|flexible|locked|\bapr\b|\bapy\b|\bhold\b', t, re.I):
+                continue
+            code = a['code']
+            if code in cache:
+                keep[code] = cache[code]
+                continue
+            try:
+                body = get(f'{base}/detail/query?articleCode={code}')['data']['body']
+            except Exception as e:
+                print('바이낸스 공지 중단:', repr(e)[:80])
+                cache.update(keep)
+                return bn_live(keep, now), keep
+            text = re.sub(r'\s+', ' ', html.unescape(' '.join(nodes(json.loads(body), []))))
+            coins = coins_in(t) or sorted(set(re.findall(r'\b(' + '|'.join(COINS) + r') Flexible', text)))
+            keep[code] = dict(x='binance', ti=t, c=coins, ends=[x for x in (stamp(b) for _, b in PERIOD.findall(text)) if x], cd=conds(t, text), url='https://www.binance.com/en/support/announcement/' + code, bon=sorted(set(re.findall(r'\+? ?(\d+(?:\.\d+)?)% Bonus', text))))
+            time.sleep(.6)
+    return bn_live(keep, now), keep
+
+def ev_okx(now):
+    out = []
+    for page in (1, 2, 3):
+        for a in get(f'https://www.okx.com/api/v5/support/announcements?page={page}&annType=latest-events')['data'][0]['details']:
+            t = a['title']
+            held = [w for w in re.findall(r'hold (\w+)', t, re.I) if w in COINS]
+            flash = re.search(r'flash earn', t, re.I) and not held
+            if not (held or flash or re.search(r'simple earn|savings', t, re.I)):
+                continue
+            if re.search(r'trade[- ]to[- ]earn', t, re.I):
+                continue
+            text = strip(urllib.request.urlopen(urllib.request.Request(a['url'], headers=UA), timeout=25).read().decode('utf8', 'ignore'))
+            end = ends(text)
+            if end and end > now:
+                dep = sorted(set(re.findall(r'\b(BTC|ETH|OKB|XRP|SOL|USDT|USDC)\b', re.split(r'\bshare\b', re.sub(r'\(.*?\)', '', t), flags=re.I)[0])))
+                if flash:
+                    m = re.search(r'share ([\d,]+ \w+)', t, re.I)
+                    out.append(dict(x='okx', k='pool', ti=t, c=dep, end=end, cd=conds(t, text), url=a['url'], rw=m.group(1) if m else ''))
+                else:
+                    out.append(dict(x='okx', ti=t, c=held or coins_in(t), end=end, cd=conds(t, text), url=a['url']))
+            time.sleep(.2)
+    return out
+
+def ev_bitget(now):
+    # PoolX(런치풀): status 2가 진행 중
+    d = get('https://www.bitget.com/v1/finance/poolx/product/page/list/new', {'pre': '0', 'pageNo': 1, 'pageSize': 20, 'status': 2})['data']['items']
+    px = {x['symbol']: float(x['lastPr']) for x in get('https://api.bitget.com/api/v2/spot/market/tickers')['data'] if x.get('lastPr')}
+    price = lambda c: 1.0 if c in COINS else px.get(c + 'USDT')
+    out = []
+    for p in d:
+        start, end = int(p['startTime']) / 1000, int(p['endTime']) / 1000
+        days = max((end - start) / 86400, 1e-9)
+        pools = []
+        for q in p['productSubList']:
+            stake, rew = float(q['totalStakedAmount'] or 0), float(q['totalRewards'] or 0)
+            a, b = price(p['productCoinName']), price(q['productSubCoinName'])
+            exp = round(rew * a / (stake * b) * 365 / days * 100, 2) if a and b and stake else None
+            pools.append(dict(c=q['productSubCoinName'], ap=float(q['apr'] or 0), exp=exp, rew=rew, st=stake, cap=float(q['userMaxAmount'] or 0), v=bool(q.get('vipPool'))))
+        out.append(dict(x='bitget', k='pool', ti=f"{p['productCoinName']} PoolX", rc=p['productCoinName'], rw=f"{float(p['totalRewards']):,.0f} {p['productCoinName']}", c=[q['c'] for q in pools], end=end, start=start, cd=[], url=p['productDetailLinkUrl'].split('?')[0], pools=pools))
+    return out
+
+def events(old, cache, now):
+    res = []
+    for name, fn in (('binance', lambda: ev_binance(now, cache)), ('okx', lambda: ev_okx(now)), ('bitget', lambda: ev_bitget(now))):
+        try:
+            v = fn()
+            if name == 'binance':
+                v, cache = v
+            res += v
+            print(name, '이벤트 성공', len(v), '개')
+        except Exception as e:
+            print(name, '이벤트 실패:', repr(e)[:200])
+            res += [x for x in old if x['x'] == name and x['end'] > now]
+    return res, cache
+
+def link_events(res, evs):
+    # 바이낸스 추가 금리 구간을 같은 코인·같은 %를 적은 공지와 잇는다
+    for it in res.get('binance', {}).get('items', []):
+        if len(it['t']) < 2:
+            continue
+        extra = it['t'][0][1] - it['t'][-1][1]
+        for e in evs:
+            if e['x'] == 'binance' and it['c'] in e['c'] and any(abs(float(b) - extra) < .02 for b in e.get('bon', [])):
+                it['end'], it['cd'], it['url'] = e['end'], e['cd'], e['url']
+                break
+
 def main(path):
     try:
         old = json.load(open(path))
@@ -154,6 +317,10 @@ def main(path):
             print(name, '실패:', repr(e)[:200])
             if name in old:
                 res[name] = old[name]
+    evs, cache = events(old.get('_ev', []), {k: v for k, v in old.get('_bn', {}).items() if 'ends' in v}, now)
+    link_events(res, evs)
+    res['_ev'] = evs
+    res['_bn'] = cache
     with open(path, 'w') as f:
         json.dump(res, f, ensure_ascii=False, separators=(',', ':'))
 
