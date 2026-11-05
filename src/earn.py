@@ -104,7 +104,10 @@ def bitget():
                 if not t:
                     continue
                 days = int(p.get('period') or 0) if p.get('periodType') == 2 else 0
-                out.append(dict(c=c, n=f'고정 {days}일' if days else '자유', a=max(r for _, r in t), t=t, l=days, q=p.get('status') != 2))
+                vip = p.get('productLevel') == 2                 # 화면의 VIP 줄
+                new = not vip and p.get('annualizedRateType') == 1   # 바커가 신규로 표시하는 12% 상품과 같은 값
+                kind = f'고정 {days}일' if days else '자유'
+                out.append(dict(c=c, n=('VIP ' if vip else '신규 ' if new else '') + kind, a=max(r for _, r in t), t=t, l=days, v=vip, w=new, q=p.get('status') != 2))
     return out
 
 def gate():

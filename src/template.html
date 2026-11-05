@@ -766,7 +766,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="true">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="false">전체</button></div></div>
       <div class="field earn-exf"><span>거래소</span><div class="presets" id="earnEx"></div></div>
     </div>
-    <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock">잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규 전용·온체인 포함</label></div>
+    <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock">잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규·VIP·온체인 포함</label></div>
     <div class="earn-opts" id="evOpts" hidden><label class="earn-chk"><input type="checkbox" id="evStable">스테이블 풀만</label></div>
     <div id="earnRows" class="er-list"></div>
     <div id="evList" class="ev-list" hidden></div>
@@ -2944,26 +2944,27 @@ function interest(t, amt){
   }
   return y;
 }
-const tierTxt = t => t.length === 1 && t[0][0] == null ? '한도 없음'
-  : t.map(([up, r], i) => up == null ? `그 위 ${r}%` : `${short(up)}달러까지 ${r}%`).join(', ');
+const won = v => v >= 1e4 ? `${num(v / 1e4)}만` : num(v);
+const tierTxt = t => t.length === 1 ? (t[0][0] == null ? '한도 없음' : `${won(t[0][0])}달러 한도`)
+  : t.map(([up, r], i) => i === t.length - 1 ? `그 위 ${r}%` : `${won(up)}달러까지 ${r}%`).join(', ');
 function render(){
   if (!DATA) return;
   const amt = Math.max(0, +$('earnAmt').value || 0), lockOff = $('earnLock').checked, more = $('earnMore').checked;
   const rows = []; let hid = 0;
   for (const [x, v] of Object.entries(DATA)) for (const it of v.items) {
     if (off.has(x) || (coin && it.c !== coin) || (lockOff && it.l)) continue;
-    if (!more && (it.w || it.e)) { hid++; continue; }
+    if (!more && (it.w || it.e || it.v)) { hid++; continue; }
     const y = interest(it.t, amt);
     rows.push({x, label: v.label, it, y, eff: amt ? y / amt * 100 : 0});
   }
   rows.sort((a, b) => b.eff - a.eff || b.it.a - a.it.a);
   $('earnRows').innerHTML = rows.map(({x, label, it, y, eff}, i) => {
-    const tags = [it.w ? '신규 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
+    const tags = [it.w ? '신규 전용' : '', it.v ? 'VIP 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
     const sub = [tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a>` : ''].filter(Boolean).join(' · ');
     const shown = Math.abs(it.a - eff) >= .01 ? `<small>표시 ${it.a}%</small>` : '';
     return `<div class="er${i === 0 ? ' er-top' : ''}"><div class="er-head"><div><div class="er-name">${esc(label)}<em>${esc(it.c)} · ${esc(it.n)}</em> ${tags}</div><div class="er-sub">${sub}</div></div><div class="er-rate">${eff.toFixed(2)}%${shown}</div></div><div class="er-int"><small>하루</small>${usd(y / 365)}</div><div class="er-int"><small>일주일</small>${usd(y * 7 / 365)}</div><div class="er-int"><small>한 달</small>${usd(y * 30 / 365)}</div></div>`;
   }).join('') || '<p class="hint">조건에 맞는 상품이 없습니다.</p>';
-  $('earnNote').textContent = `이자는 지금 금리가 그 기간 유지될 때의 값이고, 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규 전용·온체인 ${hid}개는 숨겼습니다.` : ''} 종료일과 조건은 공지와 이어진 상품에만 붙습니다.`;
+  $('earnNote').textContent = `이자는 지금 금리가 그 기간 유지될 때의 값이고, 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규·VIP·온체인 ${hid}개는 숨겼습니다.` : ''} 종료일과 조건은 공지와 이어진 상품에만 붙습니다.`;
 }
 const STABLE = new Set(['USDT', 'USDC', 'USD1', 'RLUSD', 'FDUSD', 'USDE', 'USDG', 'USDGO', 'USDD', 'PYUSD', 'DAI', 'U', 'BFUSD', 'RWUSD']);
 let view = 'prod';
