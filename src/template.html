@@ -2359,7 +2359,6 @@ const isKR = s => /\.(KS|KQ)$/.test(s);
 const nameOf = s => PF.names[s] || s;
 let VIEW = 'val'; try { VIEW = localStorage.getItem('us-view') || 'val'; } catch(e){}
 let CUR = 'krw'; try { CUR = localStorage.getItem('us-cur') || 'krw'; } catch(e){}
-const short = v => v >= 1e6 ? `${num(v / 1e6, 2)}M` : v >= 1e3 ? `${num(v / 1e3, 1)}K` : num(v, 2);
 const usd = v => v == null || !isFinite(v) ? '–' : (v < 0 ? '-' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
 const COLORS = ['#e0559c','#7a5af8','#1f9d6b','#f08a24','#0ea5b7','#b7791f','#5d9bff','#9a93a0','#d9343a','#2e8b57'];
 
@@ -3017,7 +3016,7 @@ function renderEv(){
     const pct = s ? Math.min(100, Math.max(0, Math.round((now - s) / (e.end - s) * 100))) : null;
     const rows = (e.pools || []).length ? `<div class="lp-tw"><table><thead><tr><th>예치 자산</th><th>예상 APR</th><th>공식 APR</th><th>총 보상</th><th>총 예치</th><th>1인 한도</th></tr></thead><tbody>${e.pools.map(p => `<tr><td><span class="lp-mini">${esc(p.c.slice(0, 2))}</span>${esc(p.c)}${p.v ? ' <span class="tag">VIP</span>' : ''}</td><td class="lp-exp">${p.exp == null ? '-' : p.exp + '%'}</td><td>${p.ap}%</td><td>${short(p.rew)}</td><td>${short(p.st)}</td><td>${short(p.cap)}</td></tr>`).join('')}</tbody></table></div>`
       : `<p class="lp-empty">${(e.c || []).length ? `예치 자산 ${e.c.map(esc).join(', ')}` : '선택 자산 보유'} · APR과 예치액은 공지에서 확인하세요.${(e.cd || []).length ? ' ' + e.cd.map(esc).join(', ') : ''}</p>`;
-    return `<div class="lp"><div class="lp-h"><div class="lp-av">${esc(rc.slice(0, 3))}${exI(e.x, 'ex-b')}</div><div class="lp-tt"><b>${esc(rc)}</b><em>${exI(e.x)}${esc(lab)}</em><small>${b ? `${b.y}.${b.m}.${b.d} – ${a.m}.${a.d} · ${span}일` : `~ ${a.y}.${a.m}.${a.d}`}</small></div><div class="lp-air"><small>총 에어드랍</small><b>${isFinite(amt) ? short(amt) : ''}${esc(rc)}</b></div><a class="lp-go" href="${esc(e.url)}" target="_blank" rel="noopener">보기</a></div><div class="lp-prog"><div class="lp-pl"><b>${left(e.end)}</b><span>${pct == null ? '' : pct + '% 경과 · '}${a.m}.${a.d} ${a.h}:${a.n} 마감</span></div><div class="lp-bar"><i style="width:${pct == null ? 0 : pct}%"></i></div></div>${rows}</div>`;
+    return `<div class="lp"><div class="lp-h"><div class="lp-av">${esc(rc.slice(0, 3))}${exI(e.x, 'ex-b')}</div><div class="lp-tt"><b>${esc(rc)}</b><em>${exI(e.x)}${esc(lab)}</em><small>${b ? `${b.y}.${b.m}.${b.d} – ${a.m}.${a.d} · ${span}일` : `~ ${a.y}.${a.m}.${a.d}`}</small></div><div class="lp-air"><small>총 에어드랍</small><b>${isFinite(amt) ? short(amt) + ' ' : ''}${esc(rc)}</b></div><a class="lp-go" href="${esc(e.url)}" target="_blank" rel="noopener">보기</a></div><div class="lp-prog"><div class="lp-pl"><b>${left(e.end)}</b><span>${pct == null ? '' : pct + '% 경과 · '}${a.m}.${a.d} ${a.h}:${a.n} 마감</span></div><div class="lp-bar"><i style="width:${pct == null ? 0 : pct}%"></i></div></div>${rows}</div>`;
   };
   $('evList').className = wantPool ? 'lp-list' : 'ev-list';
   $('evList').innerHTML = wantPool ? (list.map(lp).join('') || '<p class="hint">조건에 맞는 런치풀이 없습니다.</p>') : list.map(e => {
