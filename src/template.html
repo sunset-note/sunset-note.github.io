@@ -76,6 +76,13 @@ th,td{padding:6px 8px;text-align:right;white-space:nowrap;border-bottom:1px soli
 th{font-size:13px;font-weight:600;color:var(--muted);position:sticky;top:0;background:var(--panel)}
 td{font-family:var(--mono);font-size:14px}
 th:first-child,td:first-child{text-align:left}
+.earn-ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:10px}
+.earn-amt{width:150px}
+.earn-chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);cursor:pointer;padding:4px 0}
+.earn-table{max-height:none}
+.earn-table td small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.earn-table .earn-eff{font-weight:700;color:var(--up)}
+#earnEx button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
 .tag{font:500 12px var(--font);padding:1px 6px;border-radius:4px;background:var(--soft);color:var(--muted)}
 .tag.p{background:var(--proxy);color:var(--proxy-ink)}
 .heatwrap{overflow-x:auto}
@@ -119,7 +126,7 @@ th:first-child,td:first-child{text-align:left}
 .kc-top .seg{min-width:150px}
 .kc-big{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;font:13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;min-height:30px;margin-bottom:4px}
 .kc-big .now{font:500 23px var(--mono);letter-spacing:-.02em}
-.presets button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+#earnEx button[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
 /* 내 포트폴리오 */
 select{width:100%;font:500 15px var(--font);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
 input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
@@ -345,7 +352,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <span class="tk time" id="tkTime">연결 중…</span>
 </div></div>
 
-<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
+<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>거래소 예치</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
 <div class="wrap" id="syncPanel" hidden style="padding-block:12px 0">
   <section class="card">
     <div class="head"><h2>기기 연동 (컴퓨터 ↔ 폰)</h2><p class="hint" id="syncState"></p></div>
@@ -714,6 +721,20 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       </section>
     </main>
   </div>
+</div>
+
+<div class="wrap" id="tab-earn" hidden>
+  <section class="card">
+    <div class="head"><h2>거래소 예치 금리</h2><p class="hint" id="earnAt"></p></div>
+    <div class="earn-ctl">
+      <label class="field earn-amt"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
+      <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="true">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="false">전체</button></div></div>
+      <div class="field"><span>거래소</span><div class="presets" id="earnEx"></div></div>
+      <div class="field"><span>범위</span><div class="presets"><label class="earn-chk"><input type="checkbox" id="earnLock">잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규 전용·온체인 포함</label></div></div>
+    </div>
+    <div class="tablewrap earn-table"><table><thead><tr><th style="text-align:left">상품</th><th>내 금액 실제 금리</th><th>표시 금리</th><th>금리 구간</th><th>잠금</th><th>연 이자</th></tr></thead><tbody id="earnRows"></tbody></table></div>
+    <p class="hint" style="margin-top:8px" id="earnNote"></p>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.30/dist/uPlot.iife.min.js"></script>
@@ -1486,6 +1507,7 @@ const useB = p => (p.b || []).filter(b => !(p.blk || []).includes(b));
 // 공모주린이 유튜브 종합점수(A+~D): 맥미니가 2시간마다 새 영상 자막에서 뽑아 중계 서버에 올린다. 남의 평가라 페이지·GitHub에는 넣지 않고
 // 계좌 정보가 있는 기기(=나)만 연동 키로 서버에서 받아 카드와 등급별 성적표에 보여 준다
 const OWN = () => ACC.people.length > 0;
+window.isOwnDevice = OWN;
 const YG = ['S','A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-'];
 // 공모주린이가 영상 등급 옆에 띄우는 기대 수익률 표(2026-11 동원파츠 영상 화면 기준). 실제 시초가가 이 범위에 들었는지로 적중을 본다
 const YR = {'S': [200, 300], 'A+': [150, 200], 'A': [100, 150], 'B+': [50, 100], 'B': [0, 50], 'C+': [-10, 10], 'C': [-Infinity, -10]};
@@ -2855,5 +2877,72 @@ ui();
     else if (!el) tip.hidden = true;
   }, true);
   addEventListener('scroll', () => { tip.hidden = true; }, true);
+})();
+</script>
+<script>
+// ---- 거래소 예치 ---- 계좌 정보가 있는 기기(=나)에게만 탭을 보여 주고, 그때만 earn.json을 받는다
+(function(){
+const $ = id => document.getElementById(id);
+const own = window.isOwnDevice && window.isOwnDevice();
+if (!own) { if (!$('tab-earn').hidden) location.hash = 'kimp'; return; }
+$('earnLink').hidden = false;
+const SMALL = ['bitget', 'gate'];     // 소액만 넣는 거래소
+const get = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch(e) { return d; } };
+const set = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num = (v, d = 0) => Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d});
+let DATA = null, coin = 'USDT', off = new Set();
+$('earnAmt').value = get('earn-amt', '10000');
+// 구간별 이자 합. 마지막 구간 위 금액은 이자가 없다
+function interest(t, amt){
+  let p = 0, y = 0;
+  for (const [up, r] of t) {
+    const top = up == null ? amt : Math.min(up, amt);
+    if (top > p) { y += (top - p) * r / 100; p = top; }
+  }
+  return y;
+}
+const tierTxt = t => t.length === 1 && t[0][0] == null ? `${t[0][1]}%`
+  : t.map(([up, r], i) => up == null ? `그 위 ${r}%` : `${i ? '~' : ''}${num(up)}달러${i ? '' : '까지'} ${r}%`).join('<br>');
+function render(){
+  if (!DATA) return;
+  const amt = Math.max(0, +$('earnAmt').value || 0), lockOff = $('earnLock').checked, more = $('earnMore').checked;
+  const rows = []; let hid = 0;
+  for (const [x, v] of Object.entries(DATA)) for (const it of v.items) {
+    if (off.has(x) || (coin && it.c !== coin) || (lockOff && it.l)) continue;
+    if (!more && (it.w || it.e)) { hid++; continue; }
+    const y = interest(it.t, amt);
+    rows.push({x, label: v.label, it, y, eff: amt ? y / amt * 100 : 0});
+  }
+  rows.sort((a, b) => b.eff - a.eff || b.it.a - a.it.a);
+  $('earnRows').innerHTML = rows.map(({x, label, it, y, eff}) => {
+    const tags = [SMALL.includes(x) ? '소액용' : '', it.w ? '신규 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : ''].filter(Boolean).map(t => `<span class="tag">${t}</span>`).join(' ');
+    return `<tr><td style="text-align:left"><b>${esc(label)}</b> ${esc(it.c)} · ${esc(it.n)} ${tags}${it.o ? `<small>${esc(it.o)}</small>` : ''}</td><td class="earn-eff">${eff.toFixed(2)}%</td><td>${it.a}%</td><td>${tierTxt(it.t)}</td><td>${it.l ? it.l + '일' : '없음'}</td><td>${num(y)}달러</td></tr>`;
+  }).join('') || '<tr><td colspan="6">조건에 맞는 상품이 없습니다.</td></tr>';
+  $('earnNote').textContent = `연 이자는 지금 금리가 1년 유지될 때의 값이고, 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규 전용·온체인 ${hid}개는 숨겼습니다.` : ''} 거래소 자료에 없는 가입 조건(순입금, VIP 등)과 종료일은 빠져 있으니 넣기 전에 거래소 화면에서 확인하세요.`;
+}
+function header(){
+  const now = Date.now() / 1000, ats = Object.values(DATA).map(v => v.at);
+  const d = new Date(Math.max(...ats) * 1000);
+  const old = Object.values(DATA).filter(v => now - v.at > 6 * 3600).map(v => v.label);
+  $('earnAt').textContent = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} 기준, 매시간 갱신${old.length ? ` · ${old.join(', ')} 자료는 오래됨` : ''}`;
+  $('earnEx').innerHTML = Object.entries(DATA).map(([x, v]) => `<button type="button" data-x="${esc(x)}" aria-pressed="true">${esc(v.label)}</button>`).join('');
+}
+async function load(){
+  if (DATA) return;
+  try {
+    const r = await fetch('earn.json?t=' + Math.floor(Date.now() / 600000));
+    if (!r.ok) throw new Error(r.status);
+    DATA = await r.json(); header(); render();
+  } catch(e) { $('earnAt').textContent = '금리 자료를 불러오지 못했습니다.'; }
+}
+$('earnAmt').addEventListener('input', () => { set('earn-amt', $('earnAmt').value); render(); });
+$('earnLock').addEventListener('change', render);
+$('earnMore').addEventListener('change', render);
+$('earnCoin').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; coin = b.dataset.v; for (const o of $('earnCoin').children) o.setAttribute('aria-pressed', String(o === b)); render(); });
+$('earnEx').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const x = b.dataset.x, was = off.has(x); was ? off.delete(x) : off.add(x); b.setAttribute('aria-pressed', String(was)); render(); });
+$('earnLink').addEventListener('click', load);
+if (!$('tab-earn').hidden) load();
+window.addEventListener('hashchange', () => { if (location.hash === '#earn') load(); });
 })();
 </script>
