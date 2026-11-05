@@ -2359,7 +2359,6 @@ const isKR = s => /\.(KS|KQ)$/.test(s);
 const nameOf = s => PF.names[s] || s;
 let VIEW = 'val'; try { VIEW = localStorage.getItem('us-view') || 'val'; } catch(e){}
 let CUR = 'krw'; try { CUR = localStorage.getItem('us-cur') || 'krw'; } catch(e){}
-const exI = (x, c = 'ex-i') => `<img class="${c}" src="ex/${esc(x)}.png" alt="" width="18" height="18" loading="lazy">`;
 const short = v => v >= 1e6 ? `${num(v / 1e6, 2)}M` : v >= 1e3 ? `${num(v / 1e3, 1)}K` : num(v, 2);
 const usd = v => v == null || !isFinite(v) ? '–' : (v < 0 ? '-' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
 const COLORS = ['#e0559c','#7a5af8','#1f9d6b','#f08a24','#0ea5b7','#b7791f','#5d9bff','#9a93a0','#d9343a','#2e8b57'];
@@ -2962,6 +2961,7 @@ const set = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
 const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = (v, d = 0) => Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d});
 const short = v => v >= 1e6 ? `${num(v / 1e6, 2)}M` : v >= 1e3 ? `${num(v / 1e3, 1)}K` : num(v, 2);
+const exI = (x, c = 'ex-i') => `<img class="${c}" src="ex/${esc(x)}.png" alt="" width="18" height="18" loading="lazy">`;
 const usd = v => `${v >= 100 ? num(v) : num(v, 2)}달러`;
 const KST = t => { const d = new Date((t + 9 * 3600) * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
 const left = t => { const s = t - Date.now() / 1000; return s < 86400 ? `${Math.max(1, Math.floor(s / 3600))}시간 남음` : `${Math.floor(s / 86400)}일 남음`; };
