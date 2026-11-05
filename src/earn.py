@@ -239,6 +239,8 @@ def ev_okx(now):
             t = a['title']
             held = [w for w in re.findall(r'hold (\w+)', t, re.I) if w in COINS]
             flash = re.search(r'flash earn', t, re.I) and not held
+            if flash and not re.search(r'hold', t, re.I):   # 예치형 Flash Earn은 ev_flash가 화면 자료로 받는다
+                continue
             if not (held or flash or re.search(r'simple earn|savings', t, re.I)):
                 continue
             if re.search(r'trade[- ]to[- ]earn', t, re.I):
@@ -254,6 +256,31 @@ def ev_okx(now):
                 else:
                     out.append(dict(x='okx', ti=t, c=held or coins_in(t), end=end, cd=conds(t, text), url=a['url']))
             time.sleep(.2)
+    return out
+
+def ev_flash(now):
+    # OKX Flash Earn 화면에 함께 실려 오는 진행 중 풀 자료
+    h = urllib.request.urlopen(urllib.request.Request('https://www.okx.com/flash-earn', headers=UA), timeout=25).read().decode('utf8', 'ignore')
+    d = json.loads(re.search(r'<script[^>]*id="appState"[^>]*>(.*?)</script>', h, re.S).group(1))
+    projects = d['appContext']['initialProps']['preData']['flashEarnStore']['flashEarnData']['ongoingProjects']
+    def price(c):
+        if c in COINS:
+            return 1.0
+        return float(get(f'https://www.okx.com/api/v5/market/ticker?instId={c}-USDT')['data'][0]['last'])
+    out = []
+    for p in projects:
+        start, end = int(p['startTime']) / 1000, int(p['endTime']) / 1000
+        days = max((end - start) / 86400, 1e-9)
+        rw = p['rewardDetails'][0]
+        pools = []
+        for q in p['poolDetails']:
+            b = q['purchaseDetails'][0]
+            c, st = b['currencyName'], float(b['poolAccumulatedPurchaseAmount'] or 0)
+            rew = float(q['rewardDetails'][0]['rewardAmount'])
+            base = float(q['apr'].get('earnRewardApr', {}).get('apr') or 0) * 100   # 함께 받는 기본 예치 금리
+            exp = round(rew * price(q['rewardDetails'][0]['currencyName']) / (st * price(c)) * 365 / days * 100 + base, 2) if st else None
+            pools.append(dict(c=c, ap=pct(float(q['apr']['apr']) * 100), exp=exp, rew=rew, st=st, cap=float(b.get('upperLimit') or 0), v=False))
+        out.append(dict(x='okx', src='okxflash', k='pool', ti=f"{rw['currencyName']} Flash Earn", rc=rw['currencyName'], rw=f"{float(rw['totalRewardAmount']):,.0f} {rw['currencyName']}", c=[q['c'] for q in pools], end=end, start=start, cd=['VIP 우대'] if p.get('isVip') else [], url='https://www.okx.com/flash-earn', pools=pools))
     return out
 
 def ev_bitget(now):
@@ -276,7 +303,7 @@ def ev_bitget(now):
 
 def events(old, cache, now):
     res = []
-    for name, fn in (('binance', lambda: ev_binance(now, cache)), ('okx', lambda: ev_okx(now)), ('bitget', lambda: ev_bitget(now))):
+    for name, fn in (('binance', lambda: ev_binance(now, cache)), ('okx', lambda: ev_okx(now)), ('okxflash', lambda: ev_flash(now)), ('bitget', lambda: ev_bitget(now))):
         try:
             v = fn()
             if name == 'binance':
@@ -285,7 +312,7 @@ def events(old, cache, now):
             print(name, '이벤트 성공', len(v), '개')
         except Exception as e:
             print(name, '이벤트 실패:', repr(e)[:200])
-            res += [x for x in old if x['x'] == name and x['end'] > now]
+            res += [x for x in old if x.get('src', x['x']) == name and x['end'] > now]
     return res, cache
 
 def link_events(res, evs):

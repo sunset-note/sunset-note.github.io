@@ -797,7 +797,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="true">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="false">전체</button></div></div>
       <div class="field earn-exf"><span>거래소</span><div class="presets" id="earnEx"></div></div>
     </div>
-    <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock">잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규·VIP·온체인 포함</label></div>
+    <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock" checked>잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규·VIP·온체인 포함</label></div>
     <div class="earn-opts" id="evOpts" hidden><label class="earn-chk"><input type="checkbox" id="evStable">스테이블 풀만</label></div>
     <div id="earnRows" class="er-list"></div>
     <div id="evList" class="ev-list" hidden></div>
@@ -3026,7 +3026,7 @@ function renderEv(){
     const tags = (e.cd || []).map(c => `<span class="tag">${esc(c)}</span>`).join('');
     return `<div class="ev"><div class="ev-top"><h3>${exI(e.x)}${esc(lab)} · ${what}</h3><span class="ev-d">${left(e.end)}</span></div><p class="ev-m">${KST(e.end)} 끝${e.rw ? ' · 총 보상 ' + esc(e.rw) : ''} · <a href="${esc(e.url)}" target="_blank" rel="noopener">공지 원문</a></p>${tags ? `<div class="ev-tags">${tags}</div>` : ''}</div>`;
   }).join('') || '<p class="hint">조건에 맞는 이벤트가 없습니다.</p>';
-  $('evNote').textContent = wantPool ? '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트 런치풀은 자료가 막혀 있어 빠져 있고, OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 것만 보입니다.' : 'OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 이벤트만 보입니다. 비트겟과 게이트는 예치 이벤트 공지 자료가 없어 빠져 있습니다.';
+  $('evNote').textContent = wantPool ? '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트 런치풀은 자료가 막혀 있어 빠져 있습니다.' : 'OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 이벤트만 보입니다. 비트겟과 게이트는 예치 이벤트 공지 자료가 없어 빠져 있습니다.';
 }
 function setView(v){
   view = v;
