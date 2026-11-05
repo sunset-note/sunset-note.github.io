@@ -78,4 +78,11 @@ for u in D["upcoming"]:
 KEEP = ("no", "name", "sub", "list", "price", "band", "inst", "lock", "lock0", "score", "score0", "brokers", "refund", "margin", "market")
 up = [dict({k: u.get(k) for k in KEEP}, kind=kind(u["inst"], u.get("lock"), u.get("score")) if u.get("inst") is not None else None, spac="스팩" in u["name"])
       for u in D["upcoming"] if u["sub"][1] >= today or (u.get("list") or "") >= today]
-print(json.dumps({"events": res, "up": up}, ensure_ascii=False))
+# 등급별 시초 손실 건수 [손실, 전체]: 2023-06-26 이후 상장(스팩 제외). template.html의 LOSS와 같은 계산
+loss = {}
+for x in H:
+    if "기업인수목적" in x["name"]: continue
+    o = loss.setdefault(kind(x["inst"], x.get("lock"), x.get("score")), [0, 0])
+    o[1] += 1
+    o[0] += x["open"] < x["price"]
+print(json.dumps({"events": res, "up": up, "loss": loss}, ensure_ascii=False))

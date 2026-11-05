@@ -1669,6 +1669,7 @@ function itemHTML(u){
       u.refund ? ['환불', sd(u.refund)] : null,
       u.comp ? ['청약 경쟁률', esc(u.comp)] : null,
       R.n ? ['비슷한 과거', `${R.n}건 · 시초 중앙 <b class="${cls(R.med)}">${pct(R.med)}</b>`] : null,
+      lossTxt(R.k) ? ['시초 손실 확률', lossTxt(R.k)] : null,
       can.length ? ['청약 가능', can.filter(x => x.ok).map(x => esc(x.p.name)).join(' · ') || '없음'] : null,
     ].filter(Boolean).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
     <details class="ir-why"><summary>자세한 근거 보기</summary>
@@ -1764,6 +1765,11 @@ function renderStats(){
 const RULE_DATE = '2026-11-01';
 const RULE_TXT = {x:'기관 100 미만, 또는 확약 1% 미만(기관 500~1,000 제외), 또는 기관 500 미만·확약 5% 미만', c:'기관 500~1,000·확약 2% 미만, 또는 기관 100~500·확약 5~25%',
   p:'기관 500 이상·확약 2~15%, 또는 기관 1,000 이상·확약 1~2%, 또는 기관 100~500·확약 25% 이상', l:'기관 500 이상·확약 15% 이상, 또는 비례 조건에 점수 80점 이상'};
+// 등급별 시초 손실 확률: 2023-06-26 이후 상장(스팩 제외). 시초가가 공모가보다 낮으면 손실, 수수료·이자는 뺀다. cal.py의 loss와 같은 계산
+const LOSS = {};
+for (const l of IPO.listed) if (l.list >= '2023-06-26' && !isSpac(l.name) && l.inst != null && l.price && l.open) {
+  const k = recKind(l.inst, l.lock ?? 0, l.score), o = LOSS[k] || (LOSS[k] = [0, 0]); o[1]++; if (l.open < l.price) o[0]++; }
+const lossTxt = k => { const o = LOSS[k]; if (!o || !o[1]) return ''; const p = o[0] / o[1] * 100; return `<b>${o[0] && p < 1 ? '1% 미만' : Math.round(p) + '%'}</b> <small>${o[1]}건 중 ${o[0]}건 · 시초가 기준</small>`; };
 const GSTAT = {};
 // 등급 배지에 마우스를 올리면 나오는 설명: 왜 이 등급인지 + 같은 등급의 과거 성적
 function recTip(k, i, lk){
