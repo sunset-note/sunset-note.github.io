@@ -791,7 +791,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 <div class="wrap" id="tab-earn" hidden>
   <section class="card earn-card">
     <div class="head"><h2>거래소 예치</h2><p class="hint" id="earnAt"></p></div>
-    <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button><button type="button" data-v="ev" aria-pressed="false">이벤트</button></div>
+    <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button></div>
     <div class="earn-ctl">
       <label class="field earn-amt" id="earnAmtBox"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
       <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="true">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="false">전체</button></div></div>
@@ -2993,11 +2993,13 @@ function render(){
     const py = n => it.p ? amt * it.p[n] / 100 : y;   // 매시간 변동 상품: 하루는 지금 금리, 일주일·한 달은 지난 7·30일 평균
     const tags = [it.w ? '신규 전용' : '', it.v ? 'VIP 전용' : '', it.e ? '온체인' : '', it.q ? '가입 가능 여부 미확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
     const pay = it.l ? (x === 'binance' ? '' : '만기 지급') : ({binance: '하루마다 지급', okx: '매시간 지급', bybit: '하루마다 지급', bitget: '매시간 지급', gate: '매시간 지급'})[x];
-    const sub = [pay, tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a>` : ''].filter(Boolean).join(' · ');
+    const rel = (window.__ev || []).filter(e => e.k !== 'pool' && e.x === x && !it.l && e.c.includes(it.c) && e.url !== it.url && e.end > Date.now() / 1000);
+    const relTxt = rel.map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener">이벤트 공지</a> ${left(e.end)}${(e.cd || []).length ? ' (' + e.cd.map(esc).join(', ') + ')' : ''}`).join(' · ');
+    const sub = [pay, tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">이벤트 공지</a>` : '', relTxt].filter(Boolean).join(' · ');
     const shown = Math.abs(it.a - eff) >= .01 ? `<small>표시 ${it.a}%</small>` : '';
     return `<div class="er${i === 0 ? ' er-top' : ''}"><div class="er-head"><div><div class="er-name">${exI(x)}${esc(label)}<em>${esc(it.c)} · ${esc(it.n)}</em> ${tags}</div><div class="er-sub">${sub}</div></div><div class="er-rate">${eff.toFixed(2)}%${shown}</div></div><div class="er-int"><small>하루</small>${usd(py(0) / 365)}</div><div class="er-int"><small>일주일</small>${usd(py(1) * 7 / 365)}</div><div class="er-int"><small>한 달</small>${usd(py(2) * 30 / 365)}</div></div>`;
   }).join('') || '<p class="hint">조건에 맞는 상품이 없습니다.</p>';
-  $('earnNote').textContent = `이자는 지금 금리가 그 기간 유지될 때의 값이고(OKX는 하루만 지금 금리, 일주일·한 달은 지난 7일·30일 평균), 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규·VIP·온체인 ${hid}개는 숨겼습니다.` : ''} 종료일과 조건은 공지와 이어진 상품에만 붙습니다.`;
+  $('earnNote').textContent = `이자는 지금 금리가 그 기간 유지될 때의 값이고(OKX는 하루만 지금 금리, 일주일·한 달은 지난 7일·30일 평균), 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규·VIP·온체인 ${hid}개는 숨겼습니다.` : ''} 이벤트 공지 링크는 같은 거래소·코인의 공지를 이어 둔 것이라, 이 금리에 적용되는지는 공지에서 확인하세요.`;
 }
 const STABLE = new Set(['USDT', 'USDC', 'USD1', 'RLUSD', 'FDUSD', 'USDE', 'USDG', 'USDGO', 'USDD', 'PYUSD', 'DAI', 'U', 'BFUSD', 'RWUSD']);
 let view = 'prod';
@@ -3006,7 +3008,7 @@ function renderEv(){
   const all = (window.__ev || []).filter(e => e.end > now && !off.has(e.x));
   const list = all.filter(e => (e.k === 'pool') === wantPool && (!coin || !wantPool && e.c.includes(coin) || wantPool && (!onlyS || e.c.some(c => STABLE.has(c)))) && (wantPool || !coin || e.c.includes(coin))).sort((a, b) => a.end - b.end);
   const nP = all.filter(e => e.k === 'pool').length, nE = all.length - nP;
-  for (const t of $('earnTabs').children) { if (t.dataset.v === 'pool') t.textContent = `런치풀 ${nP}`; if (t.dataset.v === 'ev') t.textContent = `이벤트 ${nE}`; }
+  for (const t of $('earnTabs').children) { if (t.dataset.v === 'pool') t.textContent = `런치풀 ${nP}`; }
   const D = t => { const d = new Date((t + 9 * 3600) * 1000); return {y: d.getUTCFullYear(), m: String(d.getUTCMonth() + 1).padStart(2, '0'), d: String(d.getUTCDate()).padStart(2, '0'), h: String(d.getUTCHours()).padStart(2, '0'), n: String(d.getUTCMinutes()).padStart(2, '0')}; };
   const lp = e => {
     const lab = (DATA[e.x] || {}).label || e.x;
@@ -3087,7 +3089,7 @@ async function load(){
     const r = await fetch('earn.json?t=' + Math.floor(Date.now() / 600000));
     if (!r.ok) throw new Error(r.status);
     DATA = await r.json(); window.__ev = DATA._ev || []; delete DATA._ev; delete DATA._bn; header(); render(); renderEv();
-    await bybit(); await bybitEv(); renderEv();
+    await bybit(); await bybitEv(); render(); renderEv();
   } catch(e) { $('earnAt').textContent = '금리 자료를 불러오지 못했습니다.'; }
 }
 $('earnAmt').addEventListener('input', () => { set('earn-amt', $('earnAmt').value); render(); });
