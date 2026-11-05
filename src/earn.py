@@ -197,7 +197,8 @@ def bn_live(keep, now):
         fut = [x for x in v.get('ends', []) if x > now]
         if fut and v['c']:
             e = {k: w for k, w in v.items() if k != 'ends'}
-            e['end'] = fut[0]
+            # Hold 행사는 주간 구간을 나열하므로 마지막 날이 종료일이다
+            e['end'] = fut[-1] if re.match(r'hold\b', v['ti'], re.I) else fut[0]
             out.append(e)
     return out
 
