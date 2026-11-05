@@ -248,7 +248,8 @@ def ev_okx(now):
                 dep = sorted(set(re.findall(r'\b(BTC|ETH|OKB|XRP|SOL|USDT|USDC)\b', re.split(r'\bshare\b', re.sub(r'\(.*?\)', '', t), flags=re.I)[0])))
                 if flash:
                     m = re.search(r'share ([\d,]+ \w+)', t, re.I)
-                    out.append(dict(x='okx', k='pool', ti=t, c=dep, end=end, cd=conds(t, text), url=a['url'], rw=m.group(1) if m else ''))
+                    ps = PERIOD.findall(text)
+                    out.append(dict(x='okx', k='pool', ti=t, c=dep, end=end, start=stamp(ps[0][0]) if ps else None, cd=conds(t, text), url=a['url'], rw=m.group(1) if m else ''))
                 else:
                     out.append(dict(x='okx', ti=t, c=held or coins_in(t), end=end, cd=conds(t, text), url=a['url']))
             time.sleep(.2)
