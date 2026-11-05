@@ -76,20 +76,47 @@ th,td{padding:6px 8px;text-align:right;white-space:nowrap;border-bottom:1px soli
 th{font-size:13px;font-weight:600;color:var(--muted);position:sticky;top:0;background:var(--panel)}
 td{font-family:var(--mono);font-size:14px}
 th:first-child,td:first-child{text-align:left}
-.earn-ctl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin-bottom:10px}
+.earn-card{padding:16px 18px 14px}
+.earn-tabs{max-width:360px;margin:2px 0 14px}
+.earn-tabs button{font-size:15px;padding:8px 4px}
+.earn-ctl{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
 .earn-amt{width:150px}
-.earn-chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);cursor:pointer;padding:4px 0}
-.earn-table{max-height:none}
-.ev-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:10px}
-.ev{border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
-.ev h3{font-size:14px;font-weight:600;margin:0 0 3px;overflow-wrap:anywhere}
-.ev .ev-m{font-size:12.5px;color:var(--muted);margin:0 0 6px}
-.ev table{width:100%;font-size:12.5px;border-collapse:collapse}
-.ev th{color:var(--muted);font-weight:500;text-align:right;padding:2px 4px}
-.ev td{text-align:right;padding:2px 4px}
-.ev th:first-child,.ev td:first-child{text-align:left}
-.earn-table td small{display:block;color:var(--muted);font-size:12px;font-weight:400}
-.earn-table .earn-eff{font-weight:700;color:var(--up)}
+.earn-opts{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 0 12px}
+.earn-chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);cursor:pointer}
+.earn-note{margin-top:12px}
+.er-list{display:flex;flex-direction:column;gap:8px}
+.er{display:grid;grid-template-columns:minmax(0,1fr) 112px repeat(3,minmax(84px,104px));gap:4px 14px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.er-top{border-color:var(--down);border-width:1.5px}
+.er-name{font-size:15.5px;font-weight:700;min-width:0}
+.er-name em{font-style:normal;font-weight:500;color:var(--muted);margin-left:5px}
+.er-sub{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.5}
+.er-sub a{color:inherit}
+.er-rate{text-align:right;font-size:22px;font-weight:800;color:var(--up);letter-spacing:-.02em;line-height:1.15}
+.er-rate small{display:block;font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0;margin-top:2px}
+.er-int{text-align:right;font-size:15px;font-weight:600}
+.er-int small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:1px}
+.er-end{color:var(--up);font-weight:600}
+@media (max-width:760px){
+  .er{grid-template-columns:repeat(3,minmax(0,1fr));padding:12px}
+  .er-head{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .er-int{text-align:left;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+  .er-rate{flex:none}
+}
+@media (min-width:761px){.er-head{display:contents}}
+.ev-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:10px}
+.ev{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:13px 14px;min-width:0}
+.ev-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.ev h3{font-size:15.5px;font-weight:700;margin:0;overflow-wrap:anywhere}
+.ev-d{flex:none;font-size:13px;font-weight:700;color:var(--up);white-space:nowrap}
+.ev-m{font-size:13px;color:var(--muted);margin:5px 0 0;line-height:1.5}
+.ev-m a{color:inherit}
+.ev-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.ev-p{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:8px}
+.ev-pr{display:grid;grid-template-columns:64px repeat(2,minmax(0,1fr));gap:2px 10px;align-items:baseline}
+.ev-pr b{font-size:15px}
+.ev-pr span{font-size:12.5px;color:var(--muted)}
+.ev-pr strong{display:block;font-size:17px;font-weight:800;color:var(--up)}
+.ev-pr i{font-style:normal;grid-column:1/-1;font-size:12.5px;color:var(--muted)}
 .tag{font:500 12px var(--font);padding:1px 6px;border-radius:4px;background:var(--soft);color:var(--muted)}
 .tag.p{background:var(--proxy);color:var(--proxy-ink)}
 .heatwrap{overflow-x:auto}
@@ -731,21 +758,20 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 </div>
 
 <div class="wrap" id="tab-earn" hidden>
-  <section class="card">
-    <div class="head"><h2>거래소 예치 금리</h2><p class="hint" id="earnAt"></p></div>
+  <section class="card earn-card">
+    <div class="head"><h2>거래소 예치</h2><p class="hint" id="earnAt"></p></div>
+    <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button><button type="button" data-v="ev" aria-pressed="false">이벤트</button></div>
     <div class="earn-ctl">
-      <label class="field earn-amt"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
+      <label class="field earn-amt" id="earnAmtBox"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
       <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="true">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="false">전체</button></div></div>
-      <div class="field"><span>거래소</span><div class="presets" id="earnEx"></div></div>
-      <div class="field"><span>범위</span><div class="presets"><label class="earn-chk"><input type="checkbox" id="earnLock">잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규 전용·온체인 포함</label></div></div>
+      <div class="field earn-exf"><span>거래소</span><div class="presets" id="earnEx"></div></div>
     </div>
-    <div class="tablewrap earn-table"><table><thead><tr><th style="text-align:left">상품</th><th>내 금액 실제 금리</th><th>표시 금리</th><th>금리 구간</th><th>잠금</th><th>하루</th><th>일주일</th><th>한 달</th></tr></thead><tbody id="earnRows"></tbody></table></div>
-    <p class="hint" style="margin-top:8px" id="earnNote"></p>
-  </section>
-  <section class="card" style="margin-top:18px">
-    <div class="head"><h2>진행 중 이벤트 · 런치풀</h2><label class="earn-chk"><input type="checkbox" id="evStable">스테이블 풀만</label></div>
-    <div id="evList" class="ev-list"></div>
-    <p class="hint" style="margin-top:8px" id="evNote"></p>
+    <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock">잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규 전용·온체인 포함</label></div>
+    <div class="earn-opts" id="evOpts" hidden><label class="earn-chk"><input type="checkbox" id="evStable">스테이블 풀만</label></div>
+    <div id="earnRows" class="er-list"></div>
+    <div id="evList" class="ev-list" hidden></div>
+    <p class="hint earn-note" id="earnNote"></p>
+    <p class="hint earn-note" id="evNote" hidden></p>
   </section>
 </div>
 
@@ -2302,6 +2328,7 @@ const isKR = s => /\.(KS|KQ)$/.test(s);
 const nameOf = s => PF.names[s] || s;
 let VIEW = 'val'; try { VIEW = localStorage.getItem('us-view') || 'val'; } catch(e){}
 let CUR = 'krw'; try { CUR = localStorage.getItem('us-cur') || 'krw'; } catch(e){}
+const short = v => v >= 1e6 ? `${num(v / 1e6, 2)}M` : v >= 1e3 ? `${num(v / 1e3, 1)}K` : num(v, 2);
 const usd = v => v == null || !isFinite(v) ? '–' : (v < 0 ? '-' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
 const COLORS = ['#e0559c','#7a5af8','#1f9d6b','#f08a24','#0ea5b7','#b7791f','#5d9bff','#9a93a0','#d9343a','#2e8b57'];
 
@@ -2902,6 +2929,7 @@ const get = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch(e) { 
 const set = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
 const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const num = (v, d = 0) => Number(v).toLocaleString('ko-KR', {maximumFractionDigits: d});
+const short = v => v >= 1e6 ? `${num(v / 1e6, 2)}M` : v >= 1e3 ? `${num(v / 1e3, 1)}K` : num(v, 2);
 const usd = v => `${v >= 100 ? num(v) : num(v, 2)}달러`;
 const KST = t => { const d = new Date((t + 9 * 3600) * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
 const left = t => { const s = t - Date.now() / 1000; return s < 86400 ? `${Math.max(1, Math.floor(s / 3600))}시간 남음` : `${Math.floor(s / 86400)}일 남음`; };
@@ -2916,8 +2944,8 @@ function interest(t, amt){
   }
   return y;
 }
-const tierTxt = t => t.length === 1 && t[0][0] == null ? `${t[0][1]}%`
-  : t.map(([up, r], i) => up == null ? `그 위 ${r}%` : `${i ? '~' : ''}${num(up)}달러${i ? '' : '까지'} ${r}%`).join('<br>');
+const tierTxt = t => t.length === 1 && t[0][0] == null ? '한도 없음'
+  : t.map(([up, r], i) => up == null ? `그 위 ${r}%` : `${short(up)}달러까지 ${r}%`).join(', ');
 function render(){
   if (!DATA) return;
   const amt = Math.max(0, +$('earnAmt').value || 0), lockOff = $('earnLock').checked, more = $('earnMore').checked;
@@ -2929,26 +2957,41 @@ function render(){
     rows.push({x, label: v.label, it, y, eff: amt ? y / amt * 100 : 0});
   }
   rows.sort((a, b) => b.eff - a.eff || b.it.a - a.it.a);
-  $('earnRows').innerHTML = rows.map(({x, label, it, y, eff}) => {
-    const tags = [it.w ? '신규 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : ''].filter(Boolean).map(t => `<span class="tag">${t}</span>`).join(' ');
-    return `<tr><td style="text-align:left"><b>${esc(label)}</b> ${esc(it.c)} · ${esc(it.n)} ${tags}${it.o ? `<small>${esc(it.o)}</small>` : ''}${it.end ? `<small>${KST(it.end)} 끝 · ${left(it.end)}${(it.cd || []).length ? ' · ' + it.cd.map(esc).join(', ') : ''} · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a></small>` : ''}</td><td class="earn-eff">${eff.toFixed(2)}%</td><td>${it.a}%</td><td>${tierTxt(it.t)}</td><td>${it.l ? it.l + '일' : '없음'}</td><td>${usd(y / 365)}</td><td>${usd(y * 7 / 365)}</td><td>${usd(y * 30 / 365)}</td></tr>`;
-  }).join('') || '<tr><td colspan="8">조건에 맞는 상품이 없습니다.</td></tr>';
+  $('earnRows').innerHTML = rows.map(({x, label, it, y, eff}, i) => {
+    const tags = [it.w ? '신규 전용' : '', it.e ? '온체인' : '', it.q ? '판매 상태 확인' : '', ...(it.cd || [])].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join(' ');
+    const sub = [tierTxt(it.t), it.l ? `${it.l}일 잠금` : '', it.o ? esc(it.o) : '', it.end ? `<span class="er-end">${left(it.end)}</span> · <a href="${esc(it.url)}" target="_blank" rel="noopener">공지</a>` : ''].filter(Boolean).join(' · ');
+    const shown = Math.abs(it.a - eff) >= .01 ? `<small>표시 ${it.a}%</small>` : '';
+    return `<div class="er${i === 0 ? ' er-top' : ''}"><div class="er-head"><div><div class="er-name">${esc(label)}<em>${esc(it.c)} · ${esc(it.n)}</em> ${tags}</div><div class="er-sub">${sub}</div></div><div class="er-rate">${eff.toFixed(2)}%${shown}</div></div><div class="er-int"><small>하루</small>${usd(y / 365)}</div><div class="er-int"><small>일주일</small>${usd(y * 7 / 365)}</div><div class="er-int"><small>한 달</small>${usd(y * 30 / 365)}</div></div>`;
+  }).join('') || '<p class="hint">조건에 맞는 상품이 없습니다.</p>';
   $('earnNote').textContent = `이자는 지금 금리가 그 기간 유지될 때의 값이고, 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규 전용·온체인 ${hid}개는 숨겼습니다.` : ''} 종료일과 조건은 공지와 이어진 상품에만 붙습니다.`;
 }
 const STABLE = new Set(['USDT', 'USDC', 'USD1', 'RLUSD', 'FDUSD', 'USDE', 'USDG', 'USDGO', 'USDD', 'PYUSD', 'DAI', 'U', 'BFUSD', 'RWUSD']);
-const short = v => v >= 1e6 ? `${num(v / 1e6, 2)}M` : v >= 1e3 ? `${num(v / 1e3, 1)}K` : num(v, 2);
+let view = 'prod';
 function renderEv(){
-  const onlyS = $('evStable').checked, now = Date.now() / 1000;
-  const list = (window.__ev || []).filter(e => e.end > now && !off.has(e.x) && (!onlyS || e.c.some(c => STABLE.has(c)))).sort((a, b) => a.end - b.end);
+  const onlyS = $('evStable').checked, now = Date.now() / 1000, wantPool = view === 'pool';
+  const all = (window.__ev || []).filter(e => e.end > now && !off.has(e.x));
+  const list = all.filter(e => (e.k === 'pool') === wantPool && (!coin || !wantPool && e.c.includes(coin) || wantPool && (!onlyS || e.c.some(c => STABLE.has(c)))) && (wantPool || !coin || e.c.includes(coin))).sort((a, b) => a.end - b.end);
+  const nP = all.filter(e => e.k === 'pool').length, nE = all.length - nP;
+  for (const t of $('earnTabs').children) { if (t.dataset.v === 'pool') t.textContent = `런치풀 ${nP}`; if (t.dataset.v === 'ev') t.textContent = `이벤트 ${nE}`; }
   $('evList').innerHTML = list.map(e => {
     const lab = (DATA[e.x] || {}).label || e.x;
-    const kind = e.k === 'pool' ? '런치풀' : '이벤트';
-    const pools = (e.pools || []).length ? `<table><thead><tr><th>예치</th><th>예상 APR</th><th>공식 APR</th><th>총 보상</th><th>총 예치</th><th>1인 한도</th></tr></thead><tbody>${e.pools.map(p => `<tr><td>${esc(p.c)}${p.v ? ' <span class="tag">VIP</span>' : ''}</td><td><b>${p.exp == null ? '-' : p.exp + '%'}</b></td><td>${p.ap}%</td><td>${short(p.rew)}</td><td>${short(p.st)}</td><td>${short(p.cap)}</td></tr>`).join('')}</tbody></table>` : '';
-    const coins = (e.c || []).length ? ` · ${e.c.map(esc).join(', ')}` : '';
-    const tags = (e.cd || []).map(c => `<span class="tag">${esc(c)}</span>`).join(' ');
-    return `<div class="ev"><h3><span class="tag">${kind}</span> ${esc(lab)} · <a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.ti)}</a></h3><p class="ev-m">${KST(e.end)} 끝 · ${left(e.end)}${coins}${e.rw ? ' · 총 보상 ' + esc(e.rw) : ''} ${tags}</p>${pools}</div>`;
-  }).join('') || '<p class="hint">조건에 맞는 이벤트가 없습니다.</p>';
-  $('evNote').textContent = '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트 런치풀은 자료가 막혀 있어 빠져 있고, OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 이벤트만 보입니다.';
+    const up = (e.ti.match(/up to ([\d.]+)%/i) || [])[1];
+    const what = e.k === 'pool' ? (e.c.length ? `${e.c.map(esc).join(', ')} 예치` : '선택 자산 보유') : `${e.c.map(esc).join(', ')}${up ? ` 최대 ${up}%` : ''}`;
+    const pools = (e.pools || []).length ? `<div class="ev-p">${e.pools.map(p => `<div class="ev-pr"><b>${esc(p.c)}</b><span>예상 APR<strong>${p.exp == null ? '-' : p.exp + '%'}</strong></span><span>공식 APR<strong style="color:var(--ink)">${p.ap}%</strong></span><i>총 보상 ${short(p.rew)} · 총 예치 ${short(p.st)} · 1인 한도 ${short(p.cap)}</i></div>`).join('')}</div>` : '';
+    const tags = (e.cd || []).map(c => `<span class="tag">${esc(c)}</span>`).join('');
+    return `<div class="ev"><div class="ev-top"><h3>${esc(lab)} · ${what}</h3><span class="ev-d">${left(e.end)}</span></div><p class="ev-m">${KST(e.end)} 끝${e.rw ? ' · 총 보상 ' + esc(e.rw) : ''} · <a href="${esc(e.url)}" target="_blank" rel="noopener">${e.x === 'bitget' ? '자세히' : '공지 원문'}</a></p>${tags ? `<div class="ev-tags">${tags}</div>` : ''}${pools}</div>`;
+  }).join('') || `<p class="hint">조건에 맞는 ${wantPool ? '런치풀이' : '이벤트가'} 없습니다.</p>`;
+  $('evNote').textContent = wantPool ? '예상 APR은 총 보상을 지금 가격과 총 예치액으로 나눈 값이고, 예치가 늘거나 보상 코인 값이 내리면 줄어듭니다. 게이트 런치풀은 자료가 막혀 있어 빠져 있고, OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 것만 보입니다.' : 'OKX는 자동 갱신 서버에서 공지를 받지 못해 11/5에 받아 둔 이벤트만 보입니다. 비트겟과 게이트는 예치 이벤트 공지 자료가 없어 빠져 있습니다.';
+}
+function setView(v){
+  view = v;
+  for (const t of $('earnTabs').children) t.setAttribute('aria-pressed', String(t.dataset.v === v));
+  const prod = v === 'prod';
+  for (const id of ['earnRows', 'earnOpts', 'earnNote', 'earnAmtBox']) $(id).hidden = !prod;
+  $('evList').hidden = $('evNote').hidden = prod;
+  $('evOpts').hidden = v !== 'pool';
+  $('earnCoin').parentElement.hidden = v === 'pool';
+  renderEv();
 }
 function header(){
   const now = Date.now() / 1000, ats = Object.values(DATA).map(v => v.at);
@@ -3005,9 +3048,10 @@ async function load(){
 $('earnAmt').addEventListener('input', () => { set('earn-amt', $('earnAmt').value); render(); });
 $('earnLock').addEventListener('change', render);
 $('earnMore').addEventListener('change', render);
-$('earnCoin').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; coin = b.dataset.v; for (const o of $('earnCoin').children) o.setAttribute('aria-pressed', String(o === b)); render(); });
+$('earnCoin').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; coin = b.dataset.v; for (const o of $('earnCoin').children) o.setAttribute('aria-pressed', String(o === b)); render(); renderEv(); });
 $('earnEx').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const x = b.dataset.x, was = off.has(x); was ? off.delete(x) : off.add(x); b.setAttribute('aria-pressed', String(was)); render(); renderEv(); });
 $('evStable').addEventListener('change', renderEv);
+$('earnTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
 $('earnLink').addEventListener('click', load);
 if (!$('tab-earn').hidden) load();
 window.addEventListener('hashchange', () => { if (location.hash === '#earn') load(); });
