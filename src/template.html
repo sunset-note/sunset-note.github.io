@@ -81,7 +81,7 @@ th:first-child,td:first-child{text-align:left}
 .earn-tabs button{font-size:15px;padding:8px 4px}
 .earn-ctl{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
 .earn-amt{width:150px}
-.earn-opts{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 0 12px}
+.earn-opts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:10px 0 12px}
 .earn-chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);cursor:pointer}
 .earn-note{margin-top:12px}
 .er-list{display:flex;flex-direction:column;gap:8px}
@@ -798,7 +798,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       <div class="field earn-exf"><span>거래소</span><div class="presets" id="earnEx"></div></div>
     </div>
     <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock" checked>잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규·VIP·온체인 포함</label></div>
-    <div class="earn-opts" id="evOpts" hidden><label class="earn-chk"><input type="checkbox" id="evStable">스테이블 풀만</label></div>
+    <div class="earn-opts" id="evOpts" hidden><div class="seg" id="lpView" style="min-width:170px"><button type="button" data-v="ev" aria-pressed="true">이벤트별</button><button type="button" data-v="as" aria-pressed="false">자산별</button></div><label class="earn-chk"><input type="checkbox" id="evStable">스테이블 풀만</label></div>
     <div id="earnRows" class="er-list"></div>
     <div id="evList" class="ev-list" hidden></div>
     <p class="hint earn-note" id="earnNote"></p>
@@ -3002,7 +3002,7 @@ function render(){
   $('earnNote').textContent = `이자는 지금 금리가 그 기간 유지될 때의 값이고(OKX는 하루만 지금 금리, 일주일·한 달은 지난 7일·30일 평균), 마지막 구간을 넘는 금액은 이자를 0으로 계산합니다.${hid ? ` 신규·VIP·온체인 ${hid}개는 숨겼습니다.` : ''} 이벤트 공지 링크는 같은 거래소·코인의 공지를 이어 둔 것이라, 이 금리에 적용되는지는 공지에서 확인하세요.`;
 }
 const STABLE = new Set(['USDT', 'USDC', 'USD1', 'RLUSD', 'FDUSD', 'USDE', 'USDG', 'USDGO', 'USDD', 'PYUSD', 'DAI', 'U', 'BFUSD', 'RWUSD']);
-let view = 'prod';
+let view = 'prod', lpMode = 'ev';
 function renderEv(){
   const onlyS = $('evStable').checked, now = Date.now() / 1000, wantPool = view === 'pool';
   const all = (window.__ev || []).filter(e => e.end > now && !off.has(e.x));
@@ -3020,8 +3020,16 @@ function renderEv(){
       : `<p class="lp-empty">선택 자산 보유 행사예요. 수치는 로그인해야 보여서 여기에는 나오지 않습니다. 보기를 눌러 확인하세요.${(e.cd || []).length ? ' ' + e.cd.map(esc).join(', ') : ''}</p>`;
     return `<div class="lp"><div class="lp-h"><div class="lp-av">${esc(rc.slice(0, 3))}${exI(e.x, 'ex-b')}</div><div class="lp-tt"><b>${esc(rc)}</b><em>${exI(e.x)}${esc(lab)}</em><small>${b ? `${b.y}.${b.m}.${b.d} – ${a.m}.${a.d} · ${span}일` : `~ ${a.y}.${a.m}.${a.d}`}</small></div><div class="lp-air"><small>총 에어드랍</small><b>${isFinite(amt) ? short(amt) + ' ' : ''}${esc(rc)}</b></div><a class="lp-go" href="${esc(e.url)}" target="_blank" rel="noopener">보기</a></div><div class="lp-prog"><div class="lp-pl"><b>${left(e.end)}</b><span>${pct == null ? '' : pct + '% 경과 · '}${a.m}.${a.d} ${a.h}:${a.n} 마감</span></div><div class="lp-bar"><i style="width:${pct == null ? 0 : pct}%"></i></div></div>${rows}</div>`;
   };
+  // 자산별: 같은 예치 자산의 풀을 거래소 상관없이 APR순으로 모은다
+  const byAsset = () => {
+    const m = {};
+    for (const e of list) for (const p of e.pools || []) (m[p.c] = m[p.c] || []).push({e, p});
+    const rank = c => c === 'USDT' ? 0 : c === 'USDC' ? 1 : STABLE.has(c) ? 2 : 3;
+    const val = r => r.p.exp == null ? r.p.ap : r.p.exp;
+    return Object.keys(m).sort((a, b) => rank(a) - rank(b) || m[b].length - m[a].length || a.localeCompare(b)).map(c => `<div class="lp"><div class="lp-h"><div class="lp-av">${esc(c.slice(0, 3))}</div><div class="lp-tt"><b>${esc(c)}</b><small>풀 ${m[c].length}개</small></div></div><div class="lp-tw" style="margin-top:10px"><table><thead><tr><th>보상</th><th>예상 APR</th><th>공식 APR</th><th>총 예치</th><th>1인 한도</th><th>남은 기간</th></tr></thead><tbody>${m[c].sort((a, b) => val(b) - val(a)).map(({e, p}) => `<tr><td>${exI(e.x)}<a href="${esc(e.url)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${esc(e.rc || (e.rw || '').split(' ').pop())}</a>${(e.cd || []).includes('순입금 조건') && STABLE.has(c) ? ' <span class="tag">순입금</span>' : ''}</td><td class="lp-exp">${p.exp == null ? '-' : p.exp + '%'}</td><td>${p.ap}%</td><td>${short(p.st)}</td><td>${p.cap ? short(p.cap) : '-'}</td><td>${left(e.end)}</td></tr>`).join('')}</tbody></table></div></div>`).join('');
+  };
   $('evList').className = wantPool ? 'lp-list' : 'ev-list';
-  $('evList').innerHTML = wantPool ? (list.map(lp).join('') || '<p class="hint">조건에 맞는 런치풀이 없습니다.</p>') : list.map(e => {
+  $('evList').innerHTML = wantPool ? ((lpMode === 'as' ? byAsset() : list.map(lp).join('')) || '<p class="hint">조건에 맞는 런치풀이 없습니다.</p>') : list.map(e => {
     const lab = (DATA[e.x] || {}).label || e.x;
     const up = (e.ti.match(/up to ([\d.]+)%/i) || [])[1];
     const what = `${e.c.map(esc).join(', ')}${up ? ` 최대 ${up}%` : ''}`;
@@ -3098,6 +3106,7 @@ $('earnMore').addEventListener('change', render);
 $('earnCoin').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; coin = b.dataset.v; for (const o of $('earnCoin').children) o.setAttribute('aria-pressed', String(o === b)); render(); renderEv(); });
 $('earnEx').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const x = b.dataset.x, was = off.has(x); was ? off.delete(x) : off.add(x); b.setAttribute('aria-pressed', String(was)); render(); renderEv(); });
 $('evStable').addEventListener('change', renderEv);
+$('lpView').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; lpMode = b.dataset.v; for (const o of $('lpView').children) o.setAttribute('aria-pressed', String(o === b)); renderEv(); });
 $('earnTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
 $('earnLink').addEventListener('click', load);
 if (!$('tab-earn').hidden) load();
