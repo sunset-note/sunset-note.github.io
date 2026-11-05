@@ -24,4 +24,6 @@ python3 -I -c "import sys;t=open(sys.argv[1]).read();d=open(sys.argv[2]).read();
 python3 -I "$S/cal.py" ipo.json > "$R/cal.json"
 # 거래소 예치 상품. 실패해도 페이지 빌드는 막지 않는다
 python3 -I "$S/earn.py" "$R/earn.json" || echo "예치 수집 실패"
+# update.yml의 커밋 단계에 함께 들어가도록 미리 올려 둔다
+[ -n "$GITHUB_ACTIONS" ] && git -C "$R" add earn.json || true
 echo "빌드 완료: $END까지"
