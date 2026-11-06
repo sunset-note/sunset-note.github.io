@@ -1417,11 +1417,11 @@ function fxAt(ts, ex){   // 그 시각 환율: 최근이면 실시간, 아니면
 }
 function pfCalc(){
   const pos = {}, now = Date.now()/1000; let realized = 0, sells = 0, hedge = 0, interest = 0;
-  let fq = 0, fcost = 0, fReal = 0, fRoll = 0;   // fRoll: 지금 헤지가 이어지는 동안 롤오버로 확정된 선물 손익   // 달러선물 매도 헤지: 보유 계약, 진입가 합, 청산 손익(1계약 = 1만 달러)
+  let fq = 0, fcost = 0, fReal = 0, fRoll = 0;   // fRoll: 지금 헤지가 이어지는 동안 쌓인 롤오버 비용(새 월물 − 기존 월물 가격 차이). 평균가에 이미 녹아 있다   // 달러선물 매도 헤지: 보유 계약, 진입가 합, 청산 손익(1계약 = 1만 달러)
   const rate = (S.rate || 0) / 100;
   for (const t of PF.trades.slice().sort((a,b) => a.t-b.t)){
-    if (t.side==='roll'){   // 롤오버: 기존 월물 n계약을 청산가에 되사서 손익 확정, 같은 수를 새 월물 가격에 다시 매도
-      if (fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq, pl = n*1e4*(avg - t.hp); fReal += pl; fRoll += pl; fcost += n*(t.hp2 - avg); }
+    if (t.side==='roll'){   // 롤오버: 환율 손익은 그대로 이어지고, 월물 가격 차이(새 − 기존)만 비용으로 평균가에 더한다
+      if (fq){ const n = Math.min(t.hedge, fq), d = t.hp2 - t.hp; fcost += n*d; fRoll += n*1e4*d; }
       continue;
     }
     const key = t.ex+'|'+t.fund, p = pos[key] || (pos[key] = {ex:t.ex, fund:t.fund, qty:0, cost:0, kc:0, since:null});
@@ -1452,20 +1452,10 @@ function pfCalc(){
   const fAvg = fq ? fcost/fq : null, fPnl = fq && LIVE.fx ? fq*1e4*(fAvg - LIVE.fx) : null;
   return {qty, cost, kAvg: cost ? kc/cost : null, value, own, loan, realized, sells, hedge, interest, hedgedPnl, haveK, fq, fAvg, fPnl, fReal, fRoll};
 }
-function fAvgBefore(r){   // 이 롤오버 직전의 선물 매도 평균가
-  let fq = 0, fcost = 0;
-  for (const t of PF.trades.slice().sort((a,b) => a.t-b.t)){
-    if (t === r) break;
-    if (t.side==='roll'){ if (fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq; fcost += n*(t.hp2 - avg); } continue; }
-    if (!t.hedge || !t.hp) continue;
-    if (t.side==='buy'){ fq += t.hedge; fcost += t.hedge*t.hp; } else if (fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq; fq -= n; fcost -= n*avg; }
-  }
-  return fq ? fcost/fq : r.hp;
-}
-function pfRollRow(t){   // 금액 칸에 이번 롤오버로 확정된 선물 손익
-  const pl = t.hedge*1e4*(fAvgBefore(t) - t.hp);
+function pfRollRow(t){   // 금액 칸에 이번 롤오버 비용(월물 가격 차이 × 계약 수)
+  const pl = t.hedge*1e4*(t.hp2 - t.hp);
   return `<tr><td>${new Date((t.t+KST)*1000).toISOString().slice(2,16).replace('T',' ')}</td><td>선물</td><td>롤오버</td><td>–</td><td>–</td><td>–</td>`
-    + `<td class="${pl>=0?'up':'down'}" title="확정된 선물 손익">${(pl>=0?'+':'')+won(pl)}</td><td>–</td><td>${t.hedge}</td><td>${(+t.hp).toFixed(1)} → ${(+t.hp2).toFixed(1)}</td>`
+    + `<td class="${pl>=0?'up':'down'}" title="롤오버 비용 (새 월물 − 기존 월물)">${(pl>=0?'+':'')+won(pl)}</td><td>–</td><td>${t.hedge}</td><td>차이 ${(t.hp2 - t.hp >= 0 ? '+' : '') + (t.hp2 - t.hp).toFixed(1)}원</td>`
     + `<td><button type="button" class="pf-del" data-id="${t.id}" aria-label="기록 삭제">삭제</button></td></tr>`;
 }
 function pfRender(){
@@ -1477,7 +1467,7 @@ function pfRender(){
     kpi('현재 김프', kn!=null ? fmtK(kn) : '–', px ? `${EXNAME[ex]} ${px.toLocaleString('ko-KR')}원` : '시세 대기 중', kn!=null ? cls(kn) : '') +
     kpi('평가손익 (원화)', c.qty ? (upnl>=0?'+':'')+man(upnl) : '–', c.qty ? `${fmtP(upnl/c.cost*100)} · 수수료 반영` : '', cls(upnl)) +
     (c.fPnl!=null && c.qty
-      ? kpi('테더 + 선물 손익', ((upnl+c.fPnl+c.fRoll)>=0?'+':'')+man(upnl+c.fPnl+c.fRoll), `테더 ${(upnl>=0?'+':'')+man(upnl)} · 선물 ${(c.fPnl+c.fRoll>=0?'+':'')+man(c.fPnl+c.fRoll)}${c.fRoll ? ` (롤오버 확정 ${(c.fRoll>=0?'+':'')+man(c.fRoll)} 포함)` : ''}`, cls(upnl+c.fPnl+c.fRoll))
+      ? kpi('테더 + 선물 손익', ((upnl+c.fPnl)>=0?'+':'')+man(upnl+c.fPnl), `테더 ${(upnl>=0?'+':'')+man(upnl)} · 선물 ${(c.fPnl>=0?'+':'')+man(c.fPnl)}${c.fRoll ? ` (롤오버 비용 ${(c.fRoll>=0?'+':'')+won(c.fRoll)}원 포함)` : ''}`, cls(upnl+c.fPnl))
       : kpi('김프 손익 (헤지 기준)', c.haveK ? (c.hedgedPnl>=0?'+':'')+man(c.hedgedPnl) : '–', '선물 가격을 넣으면 실제 헤지 손익으로 계산', cls(c.hedgedPnl))) +
     kpi('실현손익', c.sells || c.fReal ? ((c.realized+c.fReal)>=0?'+':'')+man(c.realized+c.fReal) : '–', c.sells || c.fReal ? `매도 ${c.sells}회${c.fReal ? ` · 선물 ${(c.fReal>=0?'+':'')+man(c.fReal)}` + " 포함" : ''}` : '매도 0회', cls(c.realized+c.fReal)) +
     kpi('달러선물 헤지', c.hedge ? `${c.hedge}계약` : '–', c.fAvg!=null ? `매도 평균 ${c.fAvg.toFixed(1)}원 · 선물 손익은 현재 환율로 추정` : (c.qty ? `보유 ${Math.round(c.qty).toLocaleString('ko-KR')}달러 대비 ${(c.hedge*10000).toLocaleString('ko-KR')}달러` : '1계약 = 1만 달러'), '') +
