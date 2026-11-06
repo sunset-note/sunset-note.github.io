@@ -1475,7 +1475,7 @@ function pfRender(){
     (c.fPnl!=null && c.qty
       ? kpi('테더 + 선물 손익', ((upnl+c.fPnl+c.fRoll)>=0?'+':'')+man(upnl+c.fPnl+c.fRoll), `테더 ${(upnl>=0?'+':'')+man(upnl)} · 선물 ${(c.fPnl+c.fRoll>=0?'+':'')+man(c.fPnl+c.fRoll)}${c.fRoll ? ` (롤오버 확정 ${(c.fRoll>=0?'+':'')+man(c.fRoll)} 포함)` : ''}`, cls(upnl+c.fPnl+c.fRoll))
       : kpi('김프 손익 (헤지 기준)', c.haveK ? (c.hedgedPnl>=0?'+':'')+man(c.hedgedPnl) : '–', '선물 가격을 넣으면 실제 헤지 손익으로 계산', cls(c.hedgedPnl))) +
-    kpi('실현손익', c.sells || c.fReal ? ((c.realized+c.fReal)>=0?'+':'')+man(c.realized+c.fReal) : '–', c.sells || c.fReal ? `매도 ${c.sells}회${c.fReal ? ` · 선물 ${(c.fReal>=0?'+':'')+man(c.fReal)} 포함(롤오버 포함)` : ''}` : '매도 0회', cls(c.realized+c.fReal)) +
+    kpi('실현손익', c.sells || c.fReal ? ((c.realized+c.fReal)>=0?'+':'')+man(c.realized+c.fReal) : '–', c.sells || c.fReal ? `매도 ${c.sells}회${c.fReal ? ` · 선물 ${(c.fReal>=0?'+':'')+man(c.fReal)}` + " 포함" : ''}` : '매도 0회', cls(c.realized+c.fReal)) +
     kpi('달러선물 헤지', c.hedge ? `${c.hedge}계약` : '–', c.fAvg!=null ? `매도 평균 ${c.fAvg.toFixed(1)}원 · 선물 손익은 현재 환율로 추정` : (c.qty ? `보유 ${Math.round(c.qty).toLocaleString('ko-KR')}달러 대비 ${(c.hedge*10000).toLocaleString('ko-KR')}달러` : '1계약 = 1만 달러'), '') +
     kpi('마통 이자 (추정)', c.interest ? man(c.interest) : '–', `연 ${S.rate}% · 마통 보유 기간만`);
   const rows = PF.trades.slice().sort((a,b) => b.t-a.t);
