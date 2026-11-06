@@ -75,7 +75,7 @@ for u in D["upcoming"]:
                     startTime=u["sub"][1] + ("T15:00:00" if loan else "T14:30:00"), endTime=u["sub"][1] + "T16:00:00", colorId=COLOR,
                     reminders=[60, 0] if loan else [(end - start).days * 1440 + 380, 0], description="\n".join(lines)))
 # 텔레그램 공모주 알림(Cloudflare 중계 서버)용 요약: 청약·상장이 남은 종목
-KEEP = ("no", "name", "sub", "list", "price", "band", "inst", "lock", "lock0", "score", "score0", "brokers", "refund", "margin", "market")
+KEEP = ("no", "name", "sub", "list", "price", "band", "inst", "lock", "lock0", "score", "score0", "brokers", "alloc", "refund", "margin", "market")
 up = [dict({k: u.get(k) for k in KEEP}, kind=kind(u["inst"], u.get("lock"), u.get("score")) if u.get("inst") is not None else None, spac="스팩" in u["name"])
       for u in D["upcoming"] if u["sub"][1] >= today or (u.get("list") or "") >= today]
 # 등급별 시초 손실 건수 [손실, 전체]: 2023-06-26 이후 상장(스팩 제외). template.html의 LOSS와 같은 계산
