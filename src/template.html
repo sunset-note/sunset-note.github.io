@@ -795,7 +795,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button></div>
     <div class="earn-ctl">
       <label class="field earn-amt" id="earnAmtBox"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
-      <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="true">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="false">전체</button></div></div>
+      <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="false">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="true">전체</button></div></div>
       <div class="field earn-exf"><span>거래소</span><div class="presets" id="earnEx"></div></div>
     </div>
     <div class="earn-opts" id="earnOpts"><label class="earn-chk"><input type="checkbox" id="earnLock" checked>잠금 없는 것만</label><label class="earn-chk"><input type="checkbox" id="earnMore">신규·VIP·온체인 포함</label></div>
@@ -3001,8 +3001,21 @@ const exI = (x, c = 'ex-i') => `<img class="${c}" src="ex/${esc(x)}.png" alt="" 
 const usd = v => `${v >= 100 ? num(v) : num(v, 2)}달러`;
 const KST = t => { const d = new Date((t + 9 * 3600) * 1000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
 const left = t => { const s = t - Date.now() / 1000; return s < 86400 ? `${Math.max(1, Math.floor(s / 3600))}시간 남음` : `${Math.floor(s / 86400)}일 남음`; };
-let DATA = null, coin = 'USDT', off = new Set();
-$('earnAmt').value = get('earn-amt', '10000');
+let DATA = null, coin = '', off = new Set(), amtEdited = false;
+// 예치 금액 기본값 = 테더 김프 투자일지에서 지금 들고 있는 테더 수량(매수 - 매도). 직접 고치면 이번 방문 동안은 그 값을 쓴다
+function heldUsdt(){
+  try {
+    const pf = JSON.parse(localStorage.getItem('kimp-pf1') || 'null'), pos = {};
+    for (const t of ((pf && pf.trades) || []).slice().sort((a, b) => a.t - b.t)) {
+      if (t.side !== 'buy' && t.side !== 'sell') continue;
+      const k = t.ex + '|' + t.fund;
+      pos[k] = Math.max(0, (pos[k] || 0) + (t.side === 'buy' ? 1 : -1) * (+t.qty || 0));
+    }
+    return Math.floor(Object.values(pos).reduce((a, b) => a + b, 0));
+  } catch(e) { return 0; }
+}
+function setAmt(){ if (amtEdited) return; const q = heldUsdt(); $('earnAmt').value = q > 0 ? q : get('earn-amt', '10000'); }
+setAmt();
 // 구간별 이자 합. 마지막 구간 위 금액은 이자가 없다
 function interest(t, amt){
   let p = 0, y = 0;
@@ -3137,7 +3150,7 @@ async function load(){
     await bybit(); await bybitEv(); render(); renderEv();
   } catch(e) { $('earnAt').textContent = '금리 자료를 불러오지 못했습니다.'; }
 }
-$('earnAmt').addEventListener('input', () => { set('earn-amt', $('earnAmt').value); render(); });
+$('earnAmt').addEventListener('input', () => { amtEdited = true; set('earn-amt', $('earnAmt').value); render(); });
 $('earnLock').addEventListener('change', render);
 $('earnMore').addEventListener('change', render);
 $('earnCoin').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; coin = b.dataset.v; for (const o of $('earnCoin').children) o.setAttribute('aria-pressed', String(o === b)); render(); renderEv(); });
@@ -3147,6 +3160,6 @@ $('lpView').addEventListener('click', e => { const b = e.target.closest('button'
 $('earnTabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); });
 $('earnLink').addEventListener('click', load);
 if (!$('tab-earn').hidden) load();
-window.addEventListener('hashchange', () => { if (location.hash === '#earn') load(); });
+window.addEventListener('hashchange', () => { if (location.hash === '#earn') { setAmt(); render(); load(); } });
 })();
 </script>
