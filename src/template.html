@@ -451,13 +451,14 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <section class="kpis" id="pfKpis"></section>
     <form class="pf-form" id="pfForm">
       <label class="field wide"><span>일시</span><input type="datetime-local" id="pfT" required></label>
-      <label class="field"><span>거래소</span><select id="pfEx"><option value="bithumb">빗썸</option><option value="upbit">업비트</option></select></label>
-      <label class="field"><span>구분</span><select id="pfSide"><option value="buy">매수</option><option value="sell">매도</option></select></label>
-      <label class="field"><span>자금</span><select id="pfFund"><option value="own">내 돈</option><option value="loan">마통</option></select></label>
-      <label class="field"><span>수량 (USDT)</span><input type="number" id="pfQty" min="0" step="any" required></label>
-      <label class="field"><span>가격 (원)</span><input type="number" id="pfPx" min="0" step="any" required></label>
-      <label class="field"><span>헤지 (계약 수)</span><input type="number" id="pfHedge" min="0" step="1" placeholder="0"></label>
-      <label class="field"><span>달러선물 가격 (원)</span><input type="number" id="pfHp" min="0" step="0.1" placeholder="예: 1339.5"></label>
+      <label class="field pf-t"><span>거래소</span><select id="pfEx"><option value="bithumb">빗썸</option><option value="upbit">업비트</option></select></label>
+      <label class="field"><span>구분</span><select id="pfSide"><option value="buy">매수</option><option value="sell">매도</option><option value="roll">선물 롤오버</option></select></label>
+      <label class="field pf-t"><span>자금</span><select id="pfFund"><option value="own">내 돈</option><option value="loan">마통</option></select></label>
+      <label class="field pf-t"><span>수량 (USDT)</span><input type="number" id="pfQty" min="0" step="any" required></label>
+      <label class="field pf-t"><span>가격 (원)</span><input type="number" id="pfPx" min="0" step="any" required></label>
+      <label class="field"><span id="pfHedgeL">헤지 (계약 수)</span><input type="number" id="pfHedge" min="0" step="1" placeholder="0"></label>
+      <label class="field"><span id="pfHpL">달러선물 가격 (원)</span><input type="number" id="pfHp" min="0" step="0.1" placeholder="예: 1339.5"></label>
+      <label class="field" id="pfHp2F" hidden><span>새 월물 매도가 (원)</span><input type="number" id="pfHp2" min="0" step="0.1" placeholder="예: 1362.5"></label>
       <button type="submit" class="btn">기록 추가</button>
     </form>
     <p class="hint" id="pfHint"></p>
@@ -1415,6 +1416,10 @@ function pfCalc(){
   let fq = 0, fcost = 0, fReal = 0;   // 달러선물 매도 헤지: 보유 계약, 진입가 합, 청산 손익(1계약 = 1만 달러)
   const rate = (S.rate || 0) / 100;
   for (const t of PF.trades.slice().sort((a,b) => a.t-b.t)){
+    if (t.side==='roll'){   // 롤오버: 기존 월물 n계약을 청산가에 되사서 손익 확정, 같은 수를 새 월물 가격에 다시 매도
+      if (fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq; fReal += n*1e4*(avg - t.hp); fcost += n*(t.hp2 - avg); }
+      continue;
+    }
     const key = t.ex+'|'+t.fund, p = pos[key] || (pos[key] = {ex:t.ex, fund:t.fund, qty:0, cost:0, kc:0, since:null});
     const fee = FEE[t.ex]/100;
     if (t.side==='buy'){
@@ -1443,6 +1448,22 @@ function pfCalc(){
   const fAvg = fq ? fcost/fq : null, fPnl = fq && LIVE.fx ? fq*1e4*(fAvg - LIVE.fx) : null;
   return {qty, cost, kAvg: cost ? kc/cost : null, value, own, loan, realized, sells, hedge, interest, hedgedPnl, haveK, fq, fAvg, fPnl, fReal};
 }
+function fAvgBefore(r){   // 이 롤오버 직전의 선물 매도 평균가
+  let fq = 0, fcost = 0;
+  for (const t of PF.trades.slice().sort((a,b) => a.t-b.t)){
+    if (t === r) break;
+    if (t.side==='roll'){ if (fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq; fcost += n*(t.hp2 - avg); } continue; }
+    if (!t.hedge || !t.hp) continue;
+    if (t.side==='buy'){ fq += t.hedge; fcost += t.hedge*t.hp; } else if (fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq; fq -= n; fcost -= n*avg; }
+  }
+  return fq ? fcost/fq : r.hp;
+}
+function pfRollRow(t){   // 금액 칸에 이번 롤오버로 확정된 선물 손익
+  const pl = t.hedge*1e4*(fAvgBefore(t) - t.hp);
+  return `<tr><td>${new Date((t.t+KST)*1000).toISOString().slice(2,16).replace('T',' ')}</td><td>선물</td><td>롤오버</td><td>–</td><td>–</td><td>–</td>`
+    + `<td class="${pl>=0?'up':'down'}" title="확정된 선물 손익">${(pl>=0?'+':'')+won(pl)}</td><td>–</td><td>${t.hedge}</td><td>${(+t.hp).toFixed(1)} → ${(+t.hp2).toFixed(1)}</td>`
+    + `<td><button type="button" class="pf-del" data-id="${t.id}" aria-label="기록 삭제">삭제</button></td></tr>`;
+}
 function pfRender(){
   const c = pfCalc(), ex = (PF.trades.length ? PF.trades[PF.trades.length-1].ex : 'bithumb');
   const px = LIVE.tick[ex], kn = px && LIVE.fx ? (px/LIVE.fx-1)*100 : null, upnl = c.value - c.cost;
@@ -1458,7 +1479,7 @@ function pfRender(){
     kpi('달러선물 헤지', c.hedge ? `${c.hedge}계약` : '–', c.fAvg!=null ? `매도 평균 ${c.fAvg.toFixed(1)}원 · 선물 손익은 현재 환율로 추정` : (c.qty ? `보유 ${Math.round(c.qty).toLocaleString('ko-KR')}달러 대비 ${(c.hedge*10000).toLocaleString('ko-KR')}달러` : '1계약 = 1만 달러'), '') +
     kpi('마통 이자 (추정)', c.interest ? man(c.interest) : '–', `연 ${S.rate}% · 마통 보유 기간만`);
   const rows = PF.trades.slice().sort((a,b) => b.t-a.t);
-  $('pfRows').innerHTML = rows.length ? rows.map(t => `<tr><td>${new Date((t.t+KST)*1000).toISOString().slice(2,16).replace('T',' ')}</td><td>${EXNAME[t.ex]}</td>`
+  $('pfRows').innerHTML = rows.length ? rows.map(t => t.side==='roll' ? pfRollRow(t) : `<tr><td>${new Date((t.t+KST)*1000).toISOString().slice(2,16).replace('T',' ')}</td><td>${EXNAME[t.ex]}</td>`
     + `<td class="${t.side==='buy'?'down':'up'}">${t.side==='buy'?'매수':'매도'}</td><td>${t.fund==='loan'?'마통':'내 돈'}</td><td>${(+t.qty).toLocaleString('ko-KR')}</td><td>${(+t.px).toLocaleString('ko-KR')}</td>`
     + `<td>${won(t.qty*t.px)}</td><td>${t.k!=null?fmtK(t.k):'–'}</td><td>${t.hedge||0}</td><td><button type="button" class="pf-del" data-hp="${t.id}" title="선물 가격 입력·수정" style="color:var(--down)">${t.hp ? (+t.hp).toFixed(1) : '입력'}</button></td><td><button type="button" class="pf-del" data-id="${t.id}" aria-label="기록 삭제">삭제</button></td></tr>`).join('')
     : `<tr><td colspan="11" style="text-align:center;font-family:var(--font);color:var(--muted);padding:16px">아직 기록이 없습니다.</td></tr>`;
@@ -1469,6 +1490,14 @@ function pfDefaults(){
 }
 $('pfForm').addEventListener('submit', e => {
   e.preventDefault();
+  if ($('pfSide').value === 'roll'){
+    const t = Math.floor(Date.parse($('pfT').value + ':00+09:00')/1000), n = parseInt($('pfHedge').value)||0, hp = parseFloat($('pfHp').value), hp2 = parseFloat($('pfHp2').value);
+    if (!(t>0) || !(n>0) || !(hp>0) || !(hp2>0)){ $('pfHint').textContent = '일시, 계약 수, 청산가, 새 매도가를 모두 넣어 주세요.'; return; }
+    PF.trades.push({id: Date.now().toString(36), t, ex:'bithumb', side:'roll', fund:'own', qty:0, px:0, hedge:n, hp, hp2, k:null});
+    pfSave(); pfRender();
+    $('pfHint').textContent = `롤오버를 기록했습니다: ${n}계약 ${hp.toFixed(1)}원 청산 → ${hp2.toFixed(1)}원 새로 매도`;
+    $('pfHedge').value = ''; $('pfHp').value = ''; $('pfHp2').value = ''; $('pfSide').value = 'buy'; pfSide(); pfDefaults(); return;
+  }
   const t = Math.floor(Date.parse($('pfT').value + ':00+09:00')/1000), ex = $('pfEx').value, qty = parseFloat($('pfQty').value), px = parseFloat($('pfPx').value);
   if (!(t>0) || !(qty>0) || !(px>0)){ $('pfHint').textContent = '일시, 수량, 가격을 확인해 주세요.'; return; }
   const f = fxAt(t, ex), k = f ? +((px/f-1)*100).toFixed(3) : null;
@@ -1491,11 +1520,19 @@ $('pfExport').addEventListener('click', async () => {
 $('pfImport').addEventListener('click', () => {
   const s = prompt('백업 코드를 붙여 넣으세요. 이 기기의 기록은 대체됩니다.'); if (!s) return;
   try { const v = JSON.parse(s);
-    if (!v || !Array.isArray(v.trades) || !v.trades.every(t => t && t.id && t.t>0 && t.qty>0 && t.px>0 && FEE[t.ex]!=null && (t.side==='buy'||t.side==='sell') && (t.fund==='own'||t.fund==='loan'))) throw 0;
-    PF = {trades: v.trades.map(t => ({id:String(t.id), t:+t.t, ex:t.ex, side:t.side, fund:t.fund, qty:+t.qty, px:+t.px, hedge:parseInt(t.hedge)||0, hp: +t.hp || null, k: t.k==null ? null : +t.k}))};
+    if (!v || !Array.isArray(v.trades) || !v.trades.every(t => t && t.id && t.t>0 && (t.side==='roll' ? t.hedge>0 && t.hp>0 && t.hp2>0 : t.qty>0 && t.px>0 && FEE[t.ex]!=null && (t.side==='buy'||t.side==='sell') && (t.fund==='own'||t.fund==='loan')))) throw 0;
+    PF = {trades: v.trades.map(t => ({id:String(t.id), t:+t.t, ex:t.ex, side:t.side, fund:t.fund, qty:+t.qty, px:+t.px, hedge:parseInt(t.hedge)||0, hp: +t.hp || null, hp2: +t.hp2 || null, k: t.k==null ? null : +t.k}))};
     pfSave(); pfRender(); $('pfHint').textContent = `불러왔습니다(기록 ${PF.trades.length}건).`;
   } catch(e){ $('pfHint').textContent = '백업 코드를 읽지 못했습니다. 복사한 코드 전체를 붙여 넣었는지 확인해 주세요.'; }
 });
+function pfSide(){   // 롤오버를 고르면 테더 칸을 숨기고 선물 칸 이름을 바꾼다
+  const roll = $('pfSide').value === 'roll';
+  document.querySelectorAll('#pfForm .pf-t').forEach(l => l.hidden = roll);
+  $('pfQty').required = $('pfPx').required = !roll; $('pfHp2F').hidden = !roll;
+  $('pfHedgeL').textContent = roll ? '롤오버 계약 수' : '헤지 (계약 수)';
+  $('pfHpL').textContent = roll ? '기존 월물 청산가 (원)' : '달러선물 가격 (원)';
+}
+$('pfSide').addEventListener('change', pfSide);
 $('pfEx').addEventListener('change', () => { $('pfPx').placeholder = LIVE.tick[$('pfEx').value] || ''; });
 pfDefaults(); pfRender();
 $('kcEx').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.dataset.v===KS.ex) return; KS.ex = b.dataset.v; saveKS(); kcUI(); setKC(true); refreshCandles(); });
