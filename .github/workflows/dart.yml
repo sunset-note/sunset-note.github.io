@@ -1,0 +1,19 @@
+# 시험·수집용: OpenDART에서 공모주 증권발행실적보고서를 받는다(수동 실행)
+name: dart
+on:
+  workflow_dispatch:
+    inputs:
+      args:
+        description: 회사명(공백 구분)
+        default: KTE 씨아이에스케미칼 데스틴파워
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I src/dart_probe.py ${{ github.event.inputs.args }}
+        env:
+          DART_KEY: ${{ secrets.DART_KEY }}
