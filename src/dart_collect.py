@@ -28,15 +28,18 @@ def listing(bgn, end, **kw):
 start = dt.date.fromisoformat(sys.argv[1] if len(sys.argv) > 1 else "2021-01-01")
 today = dt.date.today()
 os.makedirs("out", exist_ok=True)
-rep = {}
+rep, eq = {}, set()
 d = start
 while d < today:
     e = min(d + dt.timedelta(days=89), today)
     for r in listing(d.strftime("%Y%m%d"), e.strftime("%Y%m%d"), pblntf_ty="C"):
+        if "발행조건확정" in r["report_nm"] and "지분증권" in r["report_nm"]: eq.add(r["corp_code"])
         if "증권발행실적보고서" in r["report_nm"]:
             rep[r["corp_code"]] = r if r["corp_code"] not in rep or r["rcept_no"] > rep[r["corp_code"]]["rcept_no"] else rep[r["corp_code"]]
     d = e + dt.timedelta(days=1)
-print("발행실적보고서 회사 수", len(rep))
+# 채권 발행실적이 수천 건이라, 지분증권 발행조건확정 신고서를 낸 회사(공모주·일반공모 증자)만 본다
+rep = {c: r for c, r in rep.items() if c in eq}
+print("발행실적보고서 회사 수(지분증권)", len(rep), flush=True)
 meta, n = [], 0
 for c, r in sorted(rep.items(), key=lambda x: x[1]["rcept_no"]):
     t = text(r["rcept_no"])
@@ -49,6 +52,6 @@ for c, r in sorted(rep.items(), key=lambda x: x[1]["rcept_no"]):
     with gzip.open("out/%s.json.gz" % c, "wt", encoding="utf-8") as g:
         json.dump({"corp": c, "name": r["corp_name"], "rcept": r["rcept_no"], "cls": r.get("corp_cls"), "rep": t, "fix": f2}, g, ensure_ascii=False)
     meta.append([c, r["corp_name"], r["rcept_no"], bool(f2)]); n += 1
-    if n % 25 == 0: print(n, r["corp_name"], r["rcept_no"][:8])
+    if n % 25 == 0: print(n, r["corp_name"], r["rcept_no"][:8], flush=True)
 json.dump(meta, open("out/meta.json", "w"), ensure_ascii=False)
 print("공모주 수", n)
