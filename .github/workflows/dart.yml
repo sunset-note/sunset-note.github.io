@@ -1,19 +1,28 @@
-# 시험·수집용: OpenDART에서 공모주 증권발행실적보고서를 받는다(수동 실행)
+# OpenDART 공모주 증권발행실적보고서: probe(회사명 몇 개 확인) 또는 collect(2021년 이후 전체 수집 → 아티팩트)
 name: dart
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: probe 또는 collect
+        default: probe
       args:
-        description: 회사명(공백 구분)
+        description: probe면 회사명(공백 구분), collect면 시작일(YYYY-MM-DD)
         default: KTE 씨아이에스케미칼 데스틴파워
 permissions:
   contents: read
 jobs:
-  probe:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
-      - run: python3 -I src/dart_probe.py ${{ github.event.inputs.args }}
+      - run: python3 -I src/dart_${{ github.event.inputs.mode }}.py ${{ github.event.inputs.args }}
         env:
           DART_KEY: ${{ secrets.DART_KEY }}
+      - if: github.event.inputs.mode == 'collect'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dart-ipo
+          path: out/
+          retention-days: 7
