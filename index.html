@@ -1766,6 +1766,8 @@ function FL(u, p){
     + (d ? `<br>확약 변화 ${h[0][1].toFixed(2)}% → <b class="${d > 0 ? 'up' : 'down'}">${h[h.length-1][1].toFixed(2)}%</b> (${sd(h[h.length-1][0])} 반영)` : '')
     + '</div>';
 }
+// 증권사: 목록에서 바로 보이게, 배정 물량 많은 순
+const bkSort = u => { const sh = Object.fromEntries((u.alloc || []).map(a => [a.name, a.shares || 0])); return u.brokers.map((b, i) => [b, sh[b] || 0, i]).sort((x, y) => y[1] - x[1] || x[2] - y[2]).map(x => x[0]); };
 function itemHTML(u){
   const [st, sc] = status(u), R = rec(u), [rl, rc] = REC[R.k], mine = (ACC.mine || []).includes(u.no);
   const px = u.price || null, lo = px || +(u.band||'').split('~')[0].replace(/,/g,'') || null;
@@ -1780,7 +1782,7 @@ function itemHTML(u){
   const ph = phase(u), dl = ph === 'wait' ? `청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 <b>${u.list ? sd(u.list) : '미정'}</b>` : `청약 <b>${sd(u.sub[0])}~${sd(u.sub[1])}</b> · 상장 ${u.list ? sd(u.list) : '미정'}`;
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}${mine ? ' my' : ''}" data-no="${u.no}"><summary>
     <div class="ir-top"><span class="rec ${rc}" data-tip="${esc(R.tmp ? R.why.replace(/<[^>]+>/g, '') : recTip(R.k, u.inst, u.lock))}">${rl}${R.tmp ? '(잠정)' : ''}</span>${scoreTag(u.score, u)}${ytTag(u.no)}<b>${esc(u.name)}</b><button type="button" class="mine${mine ? ' on' : ''}" data-mine="${u.no}" aria-pressed="${mine}" title="${mine ? '내 청약 해제' : '내 청약으로 표시: 등급과 상관없이 구글 캘린더에 등록'}">${mine ? '★' : '☆'}</button><span class="mk">${esc(u.market || '')}</span>${whoDots(u)}<i class="brk"></i><span class="dd ${/중|마감일|오늘/.test(st) ? 'dd-now' : st.startsWith('청약') ? 'dd-s' : st.startsWith('상장') ? 'dd-l' : ''}">${st}</span></div>
-    <div class="ir-d">${dl}</div>
+    <div class="ir-d">${dl}${u.brokers.length ? ` · 🏦 <b>${esc(bkSort(u).join(' / '))}</b>` : ''}</div>
     <div class="ir-s">${px ? `공모가 <b>${won(px)}원</b>` : `밴드 <b>${esc(u.band || '–')}</b>`}${u.inst != null ? ` · 기관 <b>${won(u.inst)}:1</b> · 확약 <b>${(u.lock ?? 0).toFixed(1)}%</b>` : ' · 수요예측 전'}</div>
   </summary><div class="ir-more">
     ${ACT ? `<div class="ir-act">${ACT}</div>` : ''}
