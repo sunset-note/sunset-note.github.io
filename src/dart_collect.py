@@ -35,15 +35,18 @@ while d < today:
     for r in listing(d.strftime("%Y%m%d"), e.strftime("%Y%m%d"), pblntf_ty="C"):
         if "발행조건확정" in r["report_nm"] and "지분증권" in r["report_nm"]: eq.add(r["corp_code"])
         if "증권발행실적보고서" in r["report_nm"]:
-            rep[r["corp_code"]] = r if r["corp_code"] not in rep or r["rcept_no"] > rep[r["corp_code"]]["rcept_no"] else rep[r["corp_code"]]
+            rep.setdefault(r["corp_code"], []).append(r)
     d = e + dt.timedelta(days=1)
 # 채권 발행실적이 수천 건이라, 지분증권 발행조건확정 신고서를 낸 회사(공모주·일반공모 증자)만 본다
 rep = {c: r for c, r in rep.items() if c in eq}
 print("발행실적보고서 회사 수(지분증권)", len(rep), flush=True)
 meta, n = [], 0
-for c, r in sorted(rep.items(), key=lambda x: x[1]["rcept_no"]):
-    t = text(r["rcept_no"])
-    if "균등방식" not in t or "청약건수" not in t: continue
+for c, rs in sorted(rep.items(), key=lambda x: min(r["rcept_no"] for r in x[1])):
+    # 한 회사에 채권·증자 실적보고서가 섞여 있으니 최신(정정본)부터 보며 균등배정 있는 것을 고른다
+    for r in sorted(rs, key=lambda r: r["rcept_no"], reverse=True):
+        t = text(r["rcept_no"])
+        if "균등방식" in t and "청약건수" in t: break
+    else: continue
     # 같은 회사의 발행조건확정 증권신고서(수요예측 결과·확약) — 실적보고서 접수일 기준 1년 안
     rd = dt.datetime.strptime(r["rcept_no"][:8], "%Y%m%d").date()
     L = json.loads(get("list.json", corp_code=c, bgn_de=(rd - dt.timedelta(days=360)).strftime("%Y%m%d"), end_de=r["rcept_no"][:8], pblntf_ty="C", page_count=100)).get("list", [])
