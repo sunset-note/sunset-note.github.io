@@ -92,8 +92,9 @@ def ols(X, Y, lam=1e-3):   # 정규방정식 + 아주 작은 릿지(증권사 �
                 f = A[r][c] / A[c][c]; A[r] = [a - f * b for a, b in zip(A[r], A[c])]
     return [A[i][k] / A[i][i] for i in range(k)]
 
-# 후보 모델: 매 실행마다 최근 100종목을 "그 종목 청약 시작 전에 공시된 자료만으로" 다시 맞혀 보고 평균 오차가 가장 작은 것을 쓴다
-CANDS = {"전체": {}, "증권사 제외": {"nobk": 1}, "최근 2년만 학습": {"years": 2}, "기관경쟁률 곡선": {"curve": 1}}
+# 후보 모델: 매 실행마다 과거 종목을 "그 종목 청약 시작 전에 공시된 자료만으로" 다시 맞혀 보고 비교한다
+BASE = "증권사 반영"   # 미래·KB 같은 대형사와 신영·하나 같은 곳의 청약건수 차이는 사실이라 기본으로 쓴다(단독 주관 같은 조건 대비 +25%~−49%)
+CANDS = {BASE: {"nobk": 1, "shrink": 10}, "전체": {}, "증권사 제외": {"nobk": 1}, "최근 2년만 학습": {"years": 2}, "기관경쟁률 곡선": {"curve": 1}}
 def shape(f, c):
     f = list(f)
     if c.get("curve"): f.append(f[1] ** 2 / 10)
@@ -153,30 +154,40 @@ def main():
     F = [feats(r, [p for p in J if p["rd"] < r["sub"][0]]) for r in J]   # 학습 자료도 실제 예측 때와 똑같이, 당시 공시된 실적만으로 분위기를 계산
     def train(c, date):
         R = [i for i, r in enumerate(J) if F[i] and r["rd"] < date and (not c.get("years") or days(date, r["sub"][1]) <= 365 * c["years"])]
-        return ols([shape(F[i], c) for i in R], [math.log(J[i]["n"]) for i in R]), len(R)
-    idx = [i for i in range(len(J)) if F[i]][-100:]
+        b = ols([shape(F[i], c) for i in R], [math.log(J[i]["n"]) for i in R]); eff = {}
+        if c.get("shrink"):   # 증권사 효과: 같은 조건 대비 그 증권사 종목들의 평균 차이, 표본이 적으면 0 쪽으로 줄인다
+            S = {}
+            for i in R:
+                for x in J[i]["brokers"]: S.setdefault(x, []).append(math.log(J[i]["n"]) - sum(p * q for p, q in zip(shape(F[i], c), b)))
+            eff = {x: sum(v) / (len(v) + c["shrink"]) for x, v in S.items()}
+        return b, eff, len(R)
+    def value(f, u, c, b, eff):   # 증권사가 여럿이면 효과가 가장 큰 곳 기준
+        return sum(p * q for p, q in zip(shape(f, c), b)) + (max(eff.get(x, 0) for x in u["brokers"]) if eff else 0)
+    idx = [i for i in range(len(J)) if F[i]][80:]
     score = {}
     for name, c in CANDS.items():
         E = []
         for i in idx:
-            b, _ = train(c, J[i]["sub"][0]); E.append(math.log(J[i]["n"]) - sum(p * q for p, q in zip(shape(F[i], c), b)))
-        A = sorted(abs(x) for x in E)
-        score[name] = {"mae": sum(A) / len(A), "med": round((math.exp(A[len(A) // 2]) - 1) * 100), "in50": round(sum(a < math.log(1.5) for a in A) / len(A) * 100), "E": sorted(E)}
-    # 후보끼리 오차 차이가 작으면 바꾸지 않는다(실행마다 모델이 오락가락하지 않게): 현재 모델보다 평균 오차가 5% 이상 작을 때만 교체
-    try: cur = json.load(open(os.path.join(ROOT, "eq.json"), encoding="utf-8")).get("model") or "전체"
-    except Exception: cur = "전체"
-    if cur not in score: cur = "전체"
-    best = min(score, key=lambda k: score[k]["mae"]); best = best if score[best]["mae"] < score[cur]["mae"] * 0.95 else cur
-    c = CANDS[best]; E = score[best]["E"]
-    lo, hi = E[int(len(E) * 0.2)], E[int(len(E) * 0.8)]   # 범위도 학습 오차가 아니라 실제로 맞혀 본 오차의 가운데 60%
+            b, eff, _ = train(c, J[i]["sub"][0]); E.append(math.log(J[i]["n"]) - value(F[i], J[i], c, b, eff))
+        A = sorted(abs(x) for x in E[-100:])
+        score[name] = {"mae": sum(abs(x) for x in E) / len(E), "med": round((math.exp(A[len(A) // 2]) - 1) * 100), "in50": round(sum(a < math.log(1.5) for a in A) / len(A) * 100), "E": E}
+    # 모델 교체: 전 구간 짝지은 오차 차이가 통계적으로 뚜렷할 때(t≥2)만. 비슷하면 현재 모델 유지(최근 100종목 5% 차이는 t=1 수준의 우연이었다)
+    try: cur = json.load(open(os.path.join(ROOT, "eq.json"), encoding="utf-8")).get("model") or BASE
+    except Exception: cur = BASE
+    if cur not in score: cur = BASE
+    best = min(score, key=lambda k: score[k]["mae"]); d = [abs(x) - abs(y) for x, y in zip(score[cur]["E"], score[best]["E"])]
+    m = sum(d) / len(d); sd = (sum((x - m) ** 2 for x in d) / max(len(d) - 1, 1)) ** 0.5; t = m / (sd / len(d) ** 0.5) if sd else 0
+    best = best if t >= 2 else cur
+    c = CANDS[best]; E = sorted(score[best]["E"][-100:])
+    lo, hi = E[int(len(E) * 0.2)], E[int(len(E) * 0.8)]   # 범위도 학습 오차가 아니라 실제로 맞혀 본 최근 100종목 오차의 가운데 60%
     today = dt.date.today().isoformat(); tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
-    b, fit = train(c, tomorrow); pred = {}
+    b, eff, fit = train(c, tomorrow); pred = {}
     log = json.load(open(LOG, encoding="utf-8")) if os.path.exists(LOG) else {}
     for u in D["upcoming"] + D["listed"]:
         if not u.get("sub") or u["sub"][1] < today or re.search("스팩|기업인수목적", u["name"]): continue
         f = feats(u, J)
         if not f: continue
-        n = math.exp(sum(p * q for p, q in zip(shape(f, c), b))); q = sum(a.get("shares") or 0 for a in u.get("alloc") or [])
+        n = math.exp(value(f, u, c, b, eff)); q = sum(a.get("shares") or 0 for a in u.get("alloc") or [])
         k = str(u["no"]); pred[k] = {"n": round(n), "e": round(q / 2 / n, 2), "lo": round(q / 2 / (n * math.exp(hi)), 2), "hi": round(q / 2 / (n * math.exp(lo)), 2), "q": q // 2}
         if k not in log or today <= u["sub"][0]: log[k] = {"name": u["name"], "made": today, "sub": u["sub"][0], "model": best, **pred[k]}   # 청약 첫날까지의 예측을 기록으로 고정
     act = {str(r["no"]): {"n": r["n"], "e": round(r["eq"] / r["n"], 2)} for r in J if days(today, r["sub"][1]) <= 60}
