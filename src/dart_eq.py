@@ -2,7 +2,7 @@
 # ② 과거 실적으로 "일반 청약건수"를 예측하는 회귀식을 다시 맞춰 ③ 청약 전 종목의 예상 균등(주)과 최근 종목의 실제 균등을 eq.json에 쓴다.
 # Worker가 eq.json을 읽어 청약 첫날 알림에 공모주린이 예상과 나란히 넣고, 실제가 나오면 비교 알림을 보낸다.
 # 근거(2022-08~2026-11 공모주 274건, 앞 80건으로 시작해 매번 과거만으로 맞추고 다음 종목을 맞히는 방식):
-#   최근 분위기만 쓰면 청약건수 중앙 오차 ±66%, 아래 변수 전체를 쓰면 ±30% (±50% 안에 68%).
+#   청약건수 중앙 오차 ±36%, ±50% 안에 63% (각 종목 청약 시작 전에 공시된 실적만 쓴 206건 검증).
 import io, json, math, os, re, sys, time, zipfile, urllib.request, urllib.parse, datetime as dt
 K = os.environ.get("DART_KEY")
 SRC = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(SRC)
