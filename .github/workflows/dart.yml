@@ -1,8 +1,8 @@
-# OpenDART 공모주: 매일 KST 7:40·18:40 eq(새 발행실적 수집 + 예상 균등 eq.json), 수동으로 probe/collect도 가능
+# OpenDART 공모주: 매일 KST 7:10·18:10 eq(새 발행실적 수집 + 예상 균등 eq.json), 수동으로 probe/collect도 가능
 name: dart
 on:
   schedule:
-    - cron: '40 22,9 * * *'   # UTC 22:40·9:40 = KST 7:40·18:40 (청약 첫날 8시 알림 전에 예측 갱신)
+    - cron: '10 22,9 * * *'   # UTC 22:10·9:10 = KST 7:10·18:10 (청약 첫날 8시 알림 전에 예측 갱신)
   workflow_dispatch:
     inputs:
       mode:
@@ -22,6 +22,10 @@ jobs:
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
+      - if: github.event.inputs.mode == 'eq' || github.event.inputs.mode == ''
+        run: python3 -I src/dart_fc.py || echo 'DART 수요예측 확인 실패'
+        env:
+          DART_KEY: ${{ secrets.DART_KEY }}
       - run: python3 -I src/dart_${{ github.event.inputs.mode || 'eq' }}.py ${{ github.event.inputs.args }}
         env:
           DART_KEY: ${{ secrets.DART_KEY }}
@@ -36,7 +40,7 @@ jobs:
         run: |
           git config user.name "sunset-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add eq.json src/dart_tot.json src/eq_log.json src/open_log.json
+          git add eq.json src/dart_tot.json src/eq_log.json src/open_log.json src/dart_fc.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git commit -q -m "예상 균등 갱신 $(TZ=Asia/Seoul date '+%m-%d %H:%M')"
           for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done

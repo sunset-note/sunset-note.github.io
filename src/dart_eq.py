@@ -150,6 +150,11 @@ def main():
     json.dump(tot, open(TOT, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
     D = json.loads(re.search(r'<script[^>]*id="ipodata"[^>]*>(.*?)</script>', html, re.S).group(1))
+    try: FC = json.load(open(os.path.join(SRC, "dart_fc.json"), encoding="utf-8"))
+    except Exception: FC = {}
+    for u in D["upcoming"]:   # 아침 8시 알림 전: 38에 아직 없는 수요예측 결과를 DART 값으로 채워 예측
+        f = FC.get(str(u["no"]))
+        if f and u.get("inst") is None: u.update({k: f[k] for k in ("inst", "lock", "price") if f.get(k) is not None})
     J = [r for r in join(D["listed"], tot) if r.get("inst") and r.get("price") and r["n"] > 100]
     F = [feats(r, [p for p in J if p["rd"] < r["sub"][0]]) for r in J]   # 학습 자료도 실제 예측 때와 똑같이, 당시 공시된 실적만으로 분위기를 계산
     def train(c, date):

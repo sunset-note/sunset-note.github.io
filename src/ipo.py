@@ -183,6 +183,18 @@ for no, s in sched.items():
         up.append(s)
 up.sort(key=lambda x: x["sub"][0])
 
+# 수요예측 결과가 38에 아직 없으면 DART [발행조건확정] 증권신고서 값을 쓴다(dart_fc.py). 38에 올라오면 38 값 우선
+try:
+    FC = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "dart_fc.json"), encoding="utf-8"))
+except Exception:
+    FC = {}
+for s in up:
+    f = FC.get(str(s["no"]))
+    if f and s.get("inst") is None:
+        s["inst"] = f["inst"]; s["fcsrc"] = "DART"
+        if f.get("lock") is not None: s["lock"] = f["lock"]
+        if f.get("price") and not s.get("price"): s["price"] = f["price"]
+
 # 확약·유통가능물량 변화 기록: 매일 값을 저장해 두고 처음 값과 비교한다
 TRACK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ipo_track.json")
 try:

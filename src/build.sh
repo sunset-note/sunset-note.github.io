@@ -11,6 +11,7 @@ python3 -I "$S/fetch.py" raw.json
 python3 -I "$S/build.py" raw.json kimp.json "$END"
 python3 -I "$S/fetch_h.py" rawh.json
 python3 -I "$S/build_h.py" rawh.json kimp.json all.json
+python3 -I "$S/dart_fc.py" || echo "DART 수요예측 확인 실패"
 python3 -I "$S/ipo.py" ipo.json
 # 미국 ETF 백테스터용 2004년 이전 원/달러(FRED DEXKOUS). 실패하면 빈 배열
 curl -s -m 60 "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXKOUS" > fred.csv || true
@@ -22,6 +23,8 @@ open('fxold.json','w').write(json.dumps(r,separators=(',',':')))"
 python3 -I -c "import sys;t=open(sys.argv[1]).read();d=open(sys.argv[2]).read();i=open(sys.argv[3]).read().replace('</','<\\/');f=open(sys.argv[5]).read();open(sys.argv[4],'w').write(t.replace('__DATA__',d).replace('__IPO__',i).replace('__FXOLD__',f))" "$S/template.html" all.json ipo.json page.html fxold.json
 { printf '<!doctype html>\n<html lang="ko">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="apple-touch-icon.png"><meta name="theme-color" content="#7f6bb8"></head>\n<body style="margin:0">\n'; cat page.html; printf '\n</body>\n</html>\n'; } > "$R/index.html"
 python3 -I "$S/cal.py" ipo.json > "$R/cal.json"
+# 새 수요예측 결과를 바로 반영해 예상 시초·균등을 다시 계산(DART 실적 수집 없이 모델만)
+DART_KEY= python3 -I "$S/dart_eq.py" || echo "예측 갱신 실패"
 # 거래소 예치 상품. 실패해도 페이지 빌드는 막지 않는다
 python3 -I "$S/earn.py" "$R/earn.json" || echo "예치 수집 실패"
 # update.yml의 커밋 단계에 함께 들어가도록 미리 올려 둔다
