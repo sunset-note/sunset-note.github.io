@@ -68,7 +68,7 @@ def join(listed, tot):
         a = nz(l["name"]); a = ALIAS.get(a, a); e = l["sub"][1].replace("-", "")
         C = [t for t in tot if e <= t["rcept"][:8] <= str(int(e) + 300) and (nz(t["name"]) in a or a in nz(t["name"]) or nz(t["name"])[:3] == a[:3])]
         if C:
-            t = min(C, key=lambda t: t["rcept"]); out.append({**l, "n": t["n"], "q0": t["q0"], "eq": t["eq"]})
+            t = min(C, key=lambda t: t["rcept"]); out.append({**l, "n": t["n"], "q0": t["q0"], "eq": t["eq"], "rd": "%s-%s-%s" % (t["rcept"][:4], t["rcept"][4:6], t["rcept"][6:8])})
     return sorted(out, key=lambda r: r["sub"][1])
 
 def mood(u, hist):   # 최근 분위기: 이 종목 청약 시작 전 45일 안에 청약이 끝난 종목들의 청약건수 중앙값(없으면 90일)
@@ -92,31 +92,60 @@ def ols(X, Y, lam=1e-3):   # 정규방정식 + 아주 작은 릿지(증권사 �
                 f = A[r][c] / A[c][c]; A[r] = [a - f * b for a, b in zip(A[r], A[c])]
     return [A[i][k] / A[i][i] for i in range(k)]
 
+# 후보 모델: 매 실행마다 최근 100종목을 "그 종목 청약 시작 전에 공시된 자료만으로" 다시 맞혀 보고 평균 오차가 가장 작은 것을 쓴다
+CANDS = {"전체": {}, "증권사 제외": {"nobk": 1}, "최근 2년만 학습": {"years": 2}, "기관경쟁률 곡선": {"curve": 1}}
+def shape(f, c):
+    f = list(f)
+    if c.get("curve"): f.append(f[1] ** 2 / 10)
+    return f[:8] if c.get("nobk") else f
+LOG = os.path.join(SRC, "eq_log.json")
+
 def main():
     tot = json.load(open(TOT, encoding="utf-8"))
     if K: collect(tot)
     json.dump(tot, open(TOT, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
     D = json.loads(re.search(r'<script[^>]*id="ipodata"[^>]*>(.*?)</script>', html, re.S).group(1))
-    J = join(D["listed"], tot)
-    X, Y = [], []
-    for i, r in enumerate(J):
-        f = feats(r, J[:i])
-        if f: X.append(f); Y.append(math.log(r["n"]))
-    b = ols(X, Y)
-    res = sorted(y - sum(p * q for p, q in zip(f, b)) for f, y in zip(X, Y))
-    lo, hi = res[int(len(res) * 0.2)], res[int(len(res) * 0.8)]   # 80% 구간이 아니라 가운데 60%: 알림엔 "보통 이 범위"로
-    today = dt.date.today().isoformat()
-    pred = {}
+    J = [r for r in join(D["listed"], tot) if r.get("inst") and r.get("price") and r["n"] > 100]
+    F = [feats(r, [p for p in J if p["rd"] < r["sub"][0]]) for r in J]   # 학습 자료도 실제 예측 때와 똑같이, 당시 공시된 실적만으로 분위기를 계산
+    def train(c, date):
+        R = [i for i, r in enumerate(J) if F[i] and r["rd"] < date and (not c.get("years") or days(date, r["sub"][1]) <= 365 * c["years"])]
+        return ols([shape(F[i], c) for i in R], [math.log(J[i]["n"]) for i in R]), len(R)
+    idx = [i for i in range(len(J)) if F[i]][-100:]
+    score = {}
+    for name, c in CANDS.items():
+        E = []
+        for i in idx:
+            b, _ = train(c, J[i]["sub"][0]); E.append(math.log(J[i]["n"]) - sum(p * q for p, q in zip(shape(F[i], c), b)))
+        A = sorted(abs(x) for x in E)
+        score[name] = {"mae": sum(A) / len(A), "med": round((math.exp(A[len(A) // 2]) - 1) * 100), "in50": round(sum(a < math.log(1.5) for a in A) / len(A) * 100), "E": sorted(E)}
+    # 후보끼리 오차 차이가 작으면 바꾸지 않는다(실행마다 모델이 오락가락하지 않게): 현재 모델보다 평균 오차가 5% 이상 작을 때만 교체
+    try: cur = json.load(open(os.path.join(ROOT, "eq.json"), encoding="utf-8")).get("model") or "전체"
+    except Exception: cur = "전체"
+    if cur not in score: cur = "전체"
+    best = min(score, key=lambda k: score[k]["mae"]); best = best if score[best]["mae"] < score[cur]["mae"] * 0.95 else cur
+    c = CANDS[best]; E = score[best]["E"]
+    lo, hi = E[int(len(E) * 0.2)], E[int(len(E) * 0.8)]   # 범위도 학습 오차가 아니라 실제로 맞혀 본 오차의 가운데 60%
+    today = dt.date.today().isoformat(); tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+    b, fit = train(c, tomorrow); pred = {}
+    log = json.load(open(LOG, encoding="utf-8")) if os.path.exists(LOG) else {}
     for u in D["upcoming"] + D["listed"]:
         if not u.get("sub") or u["sub"][1] < today or re.search("스팩|기업인수목적", u["name"]): continue
         f = feats(u, J)
         if not f: continue
-        n = math.exp(sum(p * q for p, q in zip(f, b))); q = sum(a.get("shares") or 0 for a in u.get("alloc") or [])
-        pred[str(u["no"])] = {"n": round(n), "e": round(q / 2 / n, 2), "lo": round(q / 2 / (n * math.exp(hi)), 2), "hi": round(q / 2 / (n * math.exp(lo)), 2), "q": q // 2}
+        n = math.exp(sum(p * q for p, q in zip(shape(f, c), b))); q = sum(a.get("shares") or 0 for a in u.get("alloc") or [])
+        k = str(u["no"]); pred[k] = {"n": round(n), "e": round(q / 2 / n, 2), "lo": round(q / 2 / (n * math.exp(hi)), 2), "hi": round(q / 2 / (n * math.exp(lo)), 2), "q": q // 2}
+        if k not in log or today <= u["sub"][0]: log[k] = {"name": u["name"], "made": today, "sub": u["sub"][0], "model": best, **pred[k]}   # 청약 첫날까지의 예측을 기록으로 고정
     act = {str(r["no"]): {"n": r["n"], "e": round(r["eq"] / r["n"], 2)} for r in J if days(today, r["sub"][1]) <= 60}
-    out = {"asof": dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"), "fit": len(Y), "pred": pred, "act": act}
+    for r in J:
+        k = str(r["no"])
+        if k in log: log[k]["act"] = round(r["eq"] / r["n"], 2); log[k]["actn"] = r["n"]
+    json.dump(log, open(LOG, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    done = [v for v in log.values() if "actn" in v]; AE = sorted(abs(math.log(v["n"] / v["actn"])) for v in done)
+    live = {"n": len(done), "med": round((math.exp(AE[len(AE) // 2]) - 1) * 100) if AE else None, "inrange": round(sum(v["lo"] <= v["act"] <= v["hi"] for v in done) / len(done) * 100) if done else None}
+    rank = {k: {"med": v["med"], "in50": v["in50"]} for k, v in sorted(score.items(), key=lambda x: x[1]["mae"])}
+    out = {"asof": dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"), "fit": fit, "model": best, "test": rank, "live": live, "pred": pred, "act": act}
     json.dump(out, open(os.path.join(ROOT, "eq.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
-    print("학습", len(Y), "예측", pred, "실제", len(act))
+    print("모델", best, "학습", fit, "후보", rank, "실전", live, "예측", pred)
 
 if __name__ == "__main__": main()
