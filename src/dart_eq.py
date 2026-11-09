@@ -100,6 +100,49 @@ def shape(f, c):
     return f[:8] if c.get("nobk") else f
 LOG = os.path.join(SRC, "eq_log.json")
 
+# ---- 시초가 예측 ----
+# 근거(2023-06-26 가격제한 60~400% 이후 공모주 239건, 앞 60건 뒤 매번 과거만으로 맞혀 본 179건):
+#   평균만 쓰면 오차 중앙 58%p. 청약 전(기관경쟁률·확약·일반 공모금액·시장) 36%p, 순위상관 0.70. 청약 후(+청약 경쟁률) 30%p, 순위상관 0.80.
+OLOG = os.path.join(SRC, "open_log.json")
+def compn(c):
+    if isinstance(c, (int, float)): return float(c)
+    m = re.match(r"\s*([\d,.]+)", str(c or "")); return float(m.group(1).replace(",", "")) if m else None
+def open_part(D, J, today):
+    q = {r["no"]: r["q0"] for r in J}
+    def size(u):
+        n = sum(a.get("shares") or 0 for a in u.get("alloc") or []) or q.get(u["no"]); return n * u["price"] / 1e8 if n and u.get("price") else None
+    def f(u, post):
+        sz = size(u); c = compn(u.get("comp"))
+        if not sz or not u.get("inst") or (post and not c): return None
+        return [1, math.log(u["inst"] + 1), (u.get("lock") or 0) / 10, math.log(sz), 1 if "유가" in (u.get("market") or "") + u["name"] else 0] + ([math.log(c + 1)] if post else [])
+    bad = "스팩|기업인수목적|리츠|인프라|부동산투자"
+    H = sorted([l for l in D["listed"] if l.get("open") and l.get("price") and l.get("sub") and l.get("list") and l["list"] >= "2023-06-26" and not re.search(bad, l["name"])], key=lambda r: r["list"])
+    y = lambda r: math.log(r["open"] / r["price"]); M = {}
+    for post in (False, True):
+        idx = [i for i in range(len(H)) if f(H[i], post)]; E = []
+        for i in idx[-100:]:
+            date = H[i]["sub"][1] if post else H[i]["sub"][0]; tr = [j for j in idx if H[j]["list"] < date]
+            b = ols([f(H[j], post) for j in tr], [y(H[j]) for j in tr]); E.append(y(H[i]) - sum(a * c for a, c in zip(f(H[i], post), b)))
+        E.sort(); M[post] = (ols([f(H[j], post) for j in idx], [y(H[j]) for j in idx]), E[int(len(E) * 0.2)], E[int(len(E) * 0.8)], len(idx))
+    pc = lambda v: round((min(max(math.exp(v), 0.6), 4.0) - 1) * 100)   # 상장일 시초 범위: 공모가의 60~400%
+    seen, out = set(), {}; log = json.load(open(OLOG, encoding="utf-8")) if os.path.exists(OLOG) else {}
+    for u in D["upcoming"] + D["listed"]:
+        if u["no"] in seen or u.get("open") or not u.get("sub") or re.search(bad, u["name"]) or (u.get("list") and u["list"] < today): continue
+        seen.add(u["no"]); post = u["sub"][1] < today and compn(u.get("comp")) is not None; x = f(u, post) or (None if not post else f(u, False)); post = post and bool(f(u, True))
+        if not x: continue
+        b, lo, hi, _ = M[post]; v = sum(a * c for a, c in zip(x, b)); k = str(u["no"])
+        out[k] = {"p": pc(v), "lo": pc(v + lo), "hi": pc(v + hi), "st": "post" if post else "pre"}
+        g = log.setdefault(k, {"name": u["name"], "list": u.get("list")}); g["list"] = u.get("list") or g.get("list")
+        if post: g["post"] = {**out[k], "made": today}
+        elif "pre" not in g or today <= u["sub"][0]: g["pre"] = {**out[k], "made": today}
+    act = {}
+    for r in H:
+        k = str(r["no"]); a = round((r["open"] / r["price"] - 1) * 100)
+        if k in log: log[k]["act"] = a
+        if days(today, r["list"]) <= 30: act[k] = a
+    json.dump(log, open(OLOG, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    return out, act, {"pre": M[False][3], "post": M[True][3]}
+
 def main():
     tot = json.load(open(TOT, encoding="utf-8"))
     if K: collect(tot)
@@ -145,6 +188,8 @@ def main():
     live = {"n": len(done), "med": round((math.exp(AE[len(AE) // 2]) - 1) * 100) if AE else None, "inrange": round(sum(v["lo"] <= v["act"] <= v["hi"] for v in done) / len(done) * 100) if done else None}
     rank = {k: {"med": v["med"], "in50": v["in50"]} for k, v in sorted(score.items(), key=lambda x: x[1]["mae"])}
     out = {"asof": dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%MZ"), "fit": fit, "model": best, "test": rank, "live": live, "pred": pred, "act": act}
+    out["open"], out["oa"], out["ofit"] = open_part(D, join(D["listed"], tot), today)
+    print("시초", out["open"], out["ofit"])
     json.dump(out, open(os.path.join(ROOT, "eq.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print("모델", best, "학습", fit, "후보", rank, "실전", live, "예측", pred)
 
