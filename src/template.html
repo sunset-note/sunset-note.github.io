@@ -3432,14 +3432,21 @@ function renderMap(){
   $('mkMap').innerHTML = `<div class="mk-tool"><button type="button" data-edit>${EDIT ? '편집 끝' : '지표 편집'}</button></div>` + (EDIT ? `<div class="mk-edit"><span class="hint">칸을 눌러 숨기기/보이기 · 야후 심볼로 추가</span><input id="mkAddS" placeholder="예: TSLA, ^FTSE"><input id="mkAddN" placeholder="이름 (예: 테슬라)"><button type="button" data-add>추가</button>${ADD.length ? ADD.map(([s, n]) => `<button type="button" data-del="${esc(s)}">${esc(n)} ✕</button>`).join('') : ''}</div>` : '') + G.map(([g, L]) => { const LL = EDIT ? L : L.filter(x => !HIDE.includes(x[0])); if (!LL.length) return ''; return `<div class="mk-g"><h3>${g}</h3><div class="mk-tiles">${LL.map(([s, n, , , f]) => { const q = D.q[s], c = chg(q), z = sc(s), stale = q && Date.now() / 1000 - q.t > 3 * 3600 && !/-USD$/.test(s);
     return `<button type="button" class="mk-t${SEL === s ? ' sel' : ''}${EDIT && HIDE.includes(s) ? ' off' : ''}" data-s="${s}" style="--bg-t:${tint(z)}" title="${esc(n)}: 평소 하루 변동 ±${META[s][2]}% 기준 ${Math.abs(z).toFixed(1)}배"><span class="n">${esc(n)}</span><span class="v">${q ? fmtV(q.p, f) : '–'}</span><span class="c ${c > 0 ? 'up' : c < 0 ? 'down' : ''}">${c == null ? '–' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'}</span>${q ? spark(q.sp, c >= 0) : ''}${stale ? `<span class="st">장 마감 · ${ago(q.t)}</span>` : ''}${EDIT ? `<span class="x">${HIDE.includes(s) ? '숨김 · 눌러서 보이기' : '눌러서 숨기기'}</span>` : ''}</button>`; }).join('')}</div></div>${g === '원자재 · 심리' ? dvHTML() : ''}`; }).join('');
 }
+// 시차 처리: 코인은 24시간 내내, 주식은 장이 닫히면 마지막 거래일 값이라 둘을 바로 견주지 않는다
+const TZ = s => /^(\^KS11|\^KQ11|\^N225|\^HSI|000001\.SS)$/.test(s) ? 'Asia/Seoul' : s === '^STOXX50E' ? 'Europe/Berlin' : 'America/New_York';
+const fresh = s => { const q = D && D.q[s]; return !!q && (/-USD$/.test(s) || Date.now() / 1000 - q.t < 3 * 3600); };
+const dayOf = s => { const q = D && D.q[s]; return q ? new Date(q.t * 1000).toLocaleDateString('ko-KR', {weekday: 'short', timeZone: TZ(s)}) : ''; };
+const basis = s => fresh(s) ? '' : `${dayOf(s)}요일 마감`;
 function renderMood(){
   if (!D) return;
-  const c = s => chg(D.q[s]), risk = [['NQ=F', '나스닥 선물'], ['BTC-USD', '비트코인'], ['^KS11', '코스피'], ['^SOX', '반도체']].filter(([s]) => c(s) != null);
+  const c = s => chg(D.q[s]), all = [['NQ=F', '나스닥 선물'], ['BTC-USD', '비트코인'], ['^KS11', '코스피'], ['^SOX', '반도체']].filter(([s]) => c(s) != null), risk = all.filter(([s]) => fresh(s)), stale = all.filter(([s]) => !fresh(s));
   const up = risk.filter(([s]) => c(s) > 0).length, vix = c('^VIX');
-  const line = !risk.length ? '' : up === risk.length && !(vix > 5) ? '🟢 위험자산 강세: 주식·코인이 같이 오르는 날' : up === 0 ? `🔴 위험자산 약세: 주식·코인이 같이 빠지는 날${vix > 5 ? ' · 공포지수 상승' : ''}` : '🟡 혼조: 자산마다 방향이 엇갈림';
+  const onlyCoin = risk.length && risk.every(([s]) => /-USD$/.test(s));
+  const line = !risk.length ? '' : onlyCoin ? (c('BTC-USD') >= 0 ? `🟢 지금 열린 시장은 코인뿐: 비트코인 24시간 상승` : `🔴 지금 열린 시장은 코인뿐: 비트코인 24시간 하락`) + ` (주식은 ${dayOf('^GSPC')}요일 마감값)`
+    : up === risk.length && !(vix > 5) ? '🟢 위험자산 강세: 주식·코인이 같이 오르는 날' : up === 0 ? `🔴 위험자산 약세: 주식·코인이 같이 빠지는 날${vix > 5 ? ' · 공포지수 상승' : ''}` : '🟡 혼조: 자산마다 방향이 엇갈림';
   const big = Object.keys(META).filter(s => D.q[s]).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 3);
   const f = D.fng && D.fng[0], KO = {'Extreme Fear': '극단적 공포', 'Fear': '공포', 'Neutral': '중립', 'Greed': '탐욕', 'Extreme Greed': '극단적 탐욕'};
-  $('mkMood').innerHTML = `<span class="line">${line}</span>` + risk.map(([s, n]) => `<span class="pill">${n} <b class="${c(s) > 0 ? 'up' : 'down'}">${(c(s) >= 0 ? '+' : '') + c(s).toFixed(2)}%</b></span>`).join('') +
+  $('mkMood').innerHTML = `<span class="line">${line}</span>` + all.map(([s, n]) => `<span class="pill">${n} <b class="${c(s) > 0 ? 'up' : 'down'}">${(c(s) >= 0 ? '+' : '') + c(s).toFixed(2)}%</b>${fresh(s) ? '' : ` <small class="hint">${basis(s)}</small>`}</span>`).join('') +
     (f ? `<span class="pill">코인 공포·탐욕 <b>${f.v}</b> ${KO[f.c] || f.c}${D.fng[1] ? ` (어제 ${D.fng[1].v})` : ''}</span>` : '') +
     `<span class="pill">가장 크게 움직인 것: ${big.map(s => `<b>${esc(META[s][1])}</b>`).join(' · ')}</span>`;
   AUTO = big;
@@ -3455,16 +3462,17 @@ function renderRead(){
   const R = [];
   // 1. 미국 주식: 지수 방향과 반도체가 주도했는지
   if (ok('^IXIC') && ok('^SOX')) { const n = c('^IXIC'), x = c('^SOX'), sp = ok('^GSPC') ? c('^GSPC') : null, dw = ok('^DJI') ? c('^DJI') : null;
-    let t = `미국 증시: 나스닥 <b class="${n >= 0 ? 'up' : 'down'}">${f(n)}</b>${sp != null ? `, S&P 500 ${f(sp)}` : ''}${dw != null ? `, 다우 ${f(dw)}` : ''}.`;
+    let t = `미국 증시: ${fresh('^IXIC') ? '' : `<span class="hint">(${basis('^IXIC')})</span> `}나스닥 <b class="${n >= 0 ? 'up' : 'down'}">${f(n)}</b>${sp != null ? `, S&P 500 ${f(sp)}` : ''}${dw != null ? `, 다우 ${f(dw)}` : ''}.`;
     if (Math.abs(x) > Math.abs(n) * 1.8 && Math.abs(x) > 1.5) t += ` 반도체(SOX)가 ${f(x)}로 지수보다 훨씬 크게 움직여서, <b>반도체가 ${x < 0 ? '하락' : '상승'}을 이끈 날</b>이에요.`;
     else if (dw != null && Math.sign(dw) !== Math.sign(n) && Math.abs(n - dw) > 0.6) t += ` 다우는 ${dw >= 0 ? '오르고' : '내리고'} 나스닥은 ${n >= 0 ? '올라' : '내려'} <b>기술주와 전통 업종이 엇갈렸어요</b>.`;
     R.push(t); }
   // 2. 지금 미국 선물(장 밖 시간 분위기)
   if (ok('NQ=F') && D.q['NQ=F'].t > Date.now() / 1000 - 3600 && Math.abs(z('NQ=F')) >= 0.5) R.push(`미국 선물: 지금 나스닥 선물은 <b class="${c('NQ=F') >= 0 ? 'up' : 'down'}">${f(c('NQ=F'))}</b>로, 다음 미국 장도 ${c('NQ=F') >= 0 ? '오름세로' : '약세로'} 시작할 분위기예요.`);
   // 3. 코인: 비트 vs 나스닥, 알트 vs 비트
-  if (ok('BTC-USD')) { const b = c('BTC-USD'), n = ok('NQ=F') ? c('NQ=F') : ok('^IXIC') ? c('^IXIC') : null, alts = ['ETH-USD','SOL-USD','XRP-USD'].filter(ok), ab = alts.length ? alts.reduce((a, s) => a + c(s), 0) / alts.length : null;
+  if (ok('BTC-USD')) { const b = c('BTC-USD'), n = ok('NQ=F') && fresh('NQ=F') ? c('NQ=F') : ok('^IXIC') && fresh('^IXIC') ? c('^IXIC') : null, alts = ['ETH-USD','SOL-USD','XRP-USD'].filter(ok), ab = alts.length ? alts.reduce((a, s) => a + c(s), 0) / alts.length : null;
     let t = `코인: 비트코인 24시간 <b class="${b >= 0 ? 'up' : 'down'}">${f(b)}</b>`;
     if (n != null) t += Math.sign(b) === Math.sign(n) ? (Math.abs(b) > Math.abs(n) * 2 ? `, 주식과 같은 방향이지만 폭이 ${Math.abs(b / (n || 1e-9)).toFixed(1)}배라 <b>위험자산 흐름에 코인이 더 크게 반응</b>했어요` : `, 주식과 같은 방향이에요`) : `, 주식과 반대로 움직여 <b>코인만의 재료</b>가 있는 날이에요`;
+    if (n == null && ok('^IXIC')) t += `. 주식 장이 닫혀 있어(${basis('^IXIC')}) 코인과 직접 비교하지 않았어요`;
     if (ab != null && Math.abs(ab) > Math.abs(b) * 1.3 && Math.sign(ab) === Math.sign(b)) t += `. 알트코인 평균 ${f(ab)}로 비트보다 ${b < 0 ? '더 빠졌어요' : '더 올랐어요'}`;
     const fg = D.fng && D.fng[0]; if (fg) t += `. 공포·탐욕 지수 <b>${fg.v}</b>${D.fng[1] ? `(어제 ${D.fng[1].v})` : ''}`;
     R.push(t + '.'); }
@@ -3474,10 +3482,10 @@ function renderRead(){
     if (ok('GC=F') && Math.abs(z('GC=F')) >= 0.7) P.push(`금 ${f(c('GC=F'))}${c('GC=F') > 0 ? '(안전자산으로 돈 이동)' : ''}`);
     if (ok('DX-Y.NYB') && Math.abs(z('DX-Y.NYB')) >= 0.7) P.push(`달러 인덱스 ${f(c('DX-Y.NYB'))}`);
     if (ok('CL=F') && Math.abs(z('CL=F')) >= 0.8) P.push(`유가 ${f(c('CL=F'))}`);
-    R.push(P.length ? `금리·안전자산: ${P.join(', ')}.` : '금리·달러·금은 평소 범위 안에서 움직여서, 오늘 흐름은 위험자산 쪽 재료가 중심이에요.'); }
+    R.push(P.length ? `금리·안전자산: ${ok('^VIX') && !fresh('^VIX') ? `<span class="hint">(${basis('^VIX')})</span> ` : ''}${P.join(', ')}.` : '금리·달러·금은 평소 범위 안에서 움직여서, 오늘 흐름은 위험자산 쪽 재료가 중심이에요.'); }
   // 4-1. 섹터: 가장 강한·약한 섹터
   { const S = Object.keys(META).filter(s => SEC(s) && ok(s)).sort((a, b) => c(b) - c(a));
-    if (S.length >= 5) R.push(`미국 섹터: 가장 강한 건 <b>${esc(META[S[0]][1])} ${f(c(S[0]))}</b>, 가장 약한 건 <b>${esc(META[S[S.length - 1]][1])} ${f(c(S[S.length - 1]))}</b>.${['XLU','XLP','XLV'].includes(S[0]) && c(S[0]) > 0 ? ' 방어 업종이 앞서서 위험 회피 성격이 있어요.' : ['XLK','XLY','XLC'].includes(S[0]) ? ' 성장 업종이 앞서서 위험 선호 성격이에요.' : ''}`); }
+    if (S.length >= 5) R.push(`미국 섹터: ${fresh(S[0]) ? '' : `<span class="hint">(${basis(S[0])})</span> `}가장 강한 건 <b>${esc(META[S[0]][1])} ${f(c(S[0]))}</b>, 가장 약한 건 <b>${esc(META[S[S.length - 1]][1])} ${f(c(S[S.length - 1]))}</b>.${['XLU','XLP','XLV'].includes(S[0]) && c(S[0]) > 0 ? ' 방어 업종이 앞서서 위험 회피 성격이 있어요.' : ['XLK','XLY','XLC'].includes(S[0]) ? ' 성장 업종이 앞서서 위험 선호 성격이에요.' : ''}`); }
   // 4-2. 코인 파생: 상위 트레이더 쏠림·펀딩
   { const d = D.dv && D.dv.BTC; if (d && (d.top || d.hf != null)) { const lp = r => r / (1 + r) * 100, P = [];
     if (d.top) P.push(`OKX 상위 트레이더 롱 비중 ${lp(d.top).toFixed(0)}%${d.top24 ? `(24시간 전 ${lp(d.top24).toFixed(0)}%)` : ''}`);
@@ -3488,7 +3496,7 @@ function renderRead(){
   { const L = window.LIVE, kp = L && L.tick && L.tick.bithumb && L.fx ? (L.tick.bithumb / L.fx - 1) * 100 : null, w = ok('KRW=X') ? D.q['KRW=X'] : null;
     let t = w ? `원/달러 ${w.p.toFixed(1)}원(${f(c('KRW=X'))})` : '';
     if (kp != null) t += `${t ? ', ' : ''}빗썸 테더 김프 <b>${f(kp)}</b>${kp >= 2 ? ' → 국내 코인 수요가 해외보다 강해 국내 가격이 비싼 상태' : kp <= 0 ? ' → 국내 가격이 해외보다 싸거나 같은 상태(역프)' : ''}`;
-    if (ok('^KS11')) t += `. 코스피 ${f(c('^KS11'))}${ok('^KQ11') ? `, 코스닥 ${f(c('^KQ11'))}` : ''}`;
+    if (ok('^KS11')) t += `. ${fresh('^KS11') ? '' : `<span class="hint">(${basis('^KS11')})</span> `}코스피 ${f(c('^KS11'))}${ok('^KQ11') ? `, 코스닥 ${f(c('^KQ11'))}` : ''}`;
     if (t) R.push('한국: ' + t + '.'); }
   // 주의: 변동성·쏠림·과열 신호가 기준을 넘을 때만
   const W = [], vx = D.q['^VIX'], fg = D.fng && D.fng[0], dB = D.dv && D.dv.BTC, kst = new Date(Date.now() + 9 * 3600e3), wkd = kst.getUTCDay() === 0 || kst.getUTCDay() === 6;
@@ -3504,9 +3512,9 @@ function renderRead(){
   if (ok('KRW=X') && Math.abs(z('KRW=X')) >= 1.5) W.push(`원/달러가 평소의 ${Math.abs(z('KRW=X')).toFixed(1)}배 움직였어요(${f(c('KRW=X'))}). 미국주식 원화 손익과 김프 계산이 크게 흔들려요.`);
   if (wkd) W.push('주말이라 주식·선물 장이 닫혀 있고 코인만 움직여요. 월요일 장이 열릴 때 그 사이 움직임이 한꺼번에 반영될 수 있어요.');
   // 결론: 분위기 + 주도 자산 + 주의 개수
-  const rk = [['NQ=F'], ['BTC-USD'], ['^KS11'], ['^SOX']].map(x => x[0]).filter(ok), upN = rk.filter(s => c(s) > 0).length;
-  const mood = !rk.length ? '' : upN === rk.length ? '위험자산이 같이 오르는 날' : upN === 0 ? '위험자산이 같이 빠지는 날' : '자산마다 방향이 엇갈리는 날';
-  const lead = AUTO.slice(0, 2).map(s => META[s][1]).join('·');
+  const rk = ['NQ=F', 'BTC-USD', '^KS11', '^SOX'].filter(s => ok(s) && fresh(s)), upN = rk.filter(s => c(s) > 0).length;
+  const mood = !rk.length ? '' : rk.every(s => /-USD$/.test(s)) ? `주식 장이 닫혀 있고 코인이 24시간 ${c('BTC-USD') >= 0 ? '오르는' : '빠지는'} 중` : upN === rk.length ? '위험자산이 같이 오르는 날' : upN === 0 ? '위험자산이 같이 빠지는 날' : '자산마다 방향이 엇갈리는 날';
+  const lead = Object.keys(META).filter(s => D.q[s] && fresh(s)).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 2).map(s => META[s][1]).join('·');   // 지금 열린 시장 중에서
   const con = mood ? `${mood}이에요${lead ? ` (가장 크게 움직인 것: ${esc(lead)})` : ''}. ${W.length >= 3 ? '불안 신호가 여러 개 겹쳐 있어서 <b>변동성이 큰 구간</b>이에요. 새로 들어가기보다 정해 둔 규칙대로만 움직이는 게 좋은 날이에요.' : W.length ? '주의할 신호가 있어요. 아래 주의를 확인하세요.' : '눈에 띄는 과열·공포 신호는 없어요.'}` : '';
   $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3>${con ? `<div class="mk-con"><b class="h">결론</b>${con}</div>` : ''}<div class="mk-rl">${R.map(rdRow).join('')}</div>${W.length ? `<div class="mk-warn"><b class="h">⚠️ 주의</b><ul>${W.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}<p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
 }
