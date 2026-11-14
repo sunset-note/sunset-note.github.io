@@ -480,6 +480,11 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .mk-mood{margin-top:8px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
 .mk-mood .line{font:700 18px/1.4 var(--font);letter-spacing:-.02em;flex-basis:100%}
 .mk-mood .pill{font-size:13.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--panel)}
+.mk-read{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.mk-read h3{margin:0 0 6px;font:800 15px var(--font);letter-spacing:-.02em}
+.mk-read ol{margin:0;padding-left:20px;display:grid;gap:5px}
+.mk-read li{font-size:15px;line-height:1.55}
+.mk-read li b{font-weight:700}
 .mk-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:900px){.mk-grid{grid-template-columns:minmax(0,1fr)}}
 #mkWhyCard{position:sticky;top:calc(var(--tkh,35px) + 64px)}
@@ -544,6 +549,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <section class="card mk-head" style="margin-bottom:14px">
     <div class="chk-head"><h2 style="margin:0">시장 한눈에</h2><span class="hint" id="mkTime">불러오는 중…</span></div>
     <div class="mk-mood" id="mkMood"></div>
+    <div class="mk-read" id="mkRead"></div>
   </section>
   <div class="mk-grid">
     <section class="card"><div id="mkMap"></div><p class="hint" style="margin-top:8px">칸 색 = 오늘 등락(빨강 상승 · 파랑 하락, 진할수록 평소보다 크게 움직임). 코인은 24시간 전 대비, 나머지는 전 거래일 종가 대비. 칸을 누르면 그 자산 뉴스가 나옵니다. 1분마다 갱신(야후 파이낸스·alternative.me).</p></section>
@@ -3352,6 +3358,44 @@ function renderMood(){
     `<span class="pill">가장 크게 움직인 것: ${big.map(s => `<b>${esc(META[s][1])}</b>`).join(' · ')}</span>`;
   AUTO = big;
 }
+// 오늘의 시장 읽기: 지표끼리 견줘서 규칙으로 몇 문장을 만든다(해석은 하되 전망·매매 권유는 하지 않음)
+function renderRead(){
+  if (!D) return;
+  const c = s => chg(D.q[s]), z = s => sc(s), f = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%', ok = s => c(s) != null;
+  const R = [];
+  // 1. 미국 주식: 지수 방향과 반도체가 주도했는지
+  if (ok('^IXIC') && ok('^SOX')) { const n = c('^IXIC'), x = c('^SOX'), sp = ok('^GSPC') ? c('^GSPC') : null, dw = ok('^DJI') ? c('^DJI') : null;
+    let t = `미국 증시: 나스닥 <b class="${n >= 0 ? 'up' : 'down'}">${f(n)}</b>${sp != null ? `, S&P 500 ${f(sp)}` : ''}${dw != null ? `, 다우 ${f(dw)}` : ''}.`;
+    if (Math.abs(x) > Math.abs(n) * 1.8 && Math.abs(x) > 1.5) t += ` 반도체(SOX)가 ${f(x)}로 지수보다 훨씬 크게 움직여서, <b>반도체가 ${x < 0 ? '하락' : '상승'}을 이끈 날</b>이에요.`;
+    else if (dw != null && Math.sign(dw) !== Math.sign(n) && Math.abs(n - dw) > 0.6) t += ` 다우는 ${dw >= 0 ? '오르고' : '내리고'} 나스닥은 ${n >= 0 ? '올라' : '내려'} <b>기술주와 전통 업종이 엇갈렸어요</b>.`;
+    R.push(t); }
+  // 2. 지금 미국 선물(장 밖 시간 분위기)
+  if (ok('NQ=F') && D.q['NQ=F'].t > Date.now() / 1000 - 3600 && Math.abs(z('NQ=F')) >= 0.5) R.push(`지금 나스닥 선물은 <b class="${c('NQ=F') >= 0 ? 'up' : 'down'}">${f(c('NQ=F'))}</b>로, 다음 미국 장도 ${c('NQ=F') >= 0 ? '오름세로' : '약세로'} 시작할 분위기예요.`);
+  // 3. 코인: 비트 vs 나스닥, 알트 vs 비트
+  if (ok('BTC-USD')) { const b = c('BTC-USD'), n = ok('NQ=F') ? c('NQ=F') : ok('^IXIC') ? c('^IXIC') : null, alts = ['ETH-USD','SOL-USD','XRP-USD'].filter(ok), ab = alts.length ? alts.reduce((a, s) => a + c(s), 0) / alts.length : null;
+    let t = `코인: 비트코인 24시간 <b class="${b >= 0 ? 'up' : 'down'}">${f(b)}</b>`;
+    if (n != null) t += Math.sign(b) === Math.sign(n) ? (Math.abs(b) > Math.abs(n) * 2 ? `, 주식과 같은 방향이지만 폭이 ${Math.abs(b / (n || 1e-9)).toFixed(1)}배라 <b>위험자산 흐름에 코인이 더 크게 반응</b>했어요` : `, 주식과 같은 방향이에요`) : `, 주식과 반대로 움직여 <b>코인만의 재료</b>가 있는 날이에요`;
+    if (ab != null && Math.abs(ab) > Math.abs(b) * 1.3 && Math.sign(ab) === Math.sign(b)) t += `. 알트코인 평균 ${f(ab)}로 비트보다 ${b < 0 ? '더 빠졌어요' : '더 올랐어요'}`;
+    const fg = D.fng && D.fng[0]; if (fg) t += `. 공포·탐욕 지수 <b>${fg.v}</b>${D.fng[1] ? `(어제 ${D.fng[1].v})` : ''}`;
+    R.push(t + '.'); }
+  // 4. 안전자산·금리·변동성
+  { const P = []; if (ok('^VIX') && Math.abs(c('^VIX')) >= 3) P.push(`공포지수 VIX ${f(c('^VIX'))}(${D.q['^VIX'].p.toFixed(1)}${D.q['^VIX'].p >= 20 ? ', 20 넘어 불안 구간' : ''})`);
+    if (ok('^TNX') && Math.abs(z('^TNX')) >= 0.7) P.push(`미 10년 금리 ${D.q['^TNX'].p.toFixed(2)}%(${c('^TNX') >= 0 ? '상승 → 성장주에 부담' : '하락 → 성장주에 우호적'})`);
+    if (ok('GC=F') && Math.abs(z('GC=F')) >= 0.7) P.push(`금 ${f(c('GC=F'))}${c('GC=F') > 0 ? '(안전자산으로 돈 이동)' : ''}`);
+    if (ok('DX-Y.NYB') && Math.abs(z('DX-Y.NYB')) >= 0.7) P.push(`달러 인덱스 ${f(c('DX-Y.NYB'))}`);
+    if (ok('CL=F') && Math.abs(z('CL=F')) >= 0.8) P.push(`유가 ${f(c('CL=F'))}`);
+    R.push(P.length ? `금리·안전자산: ${P.join(', ')}.` : '금리·달러·금은 평소 범위 안에서 움직여서, 오늘 흐름은 위험자산 쪽 재료가 중심이에요.'); }
+  // 5. 원화와 김프
+  { const L = window.LIVE, kp = L && L.tick && L.tick.bithumb && L.fx ? (L.tick.bithumb / L.fx - 1) * 100 : null, w = ok('KRW=X') ? D.q['KRW=X'] : null;
+    let t = w ? `원/달러 ${w.p.toFixed(1)}원(${f(c('KRW=X'))})` : '';
+    if (kp != null) t += `${t ? ', ' : ''}빗썸 테더 김프 <b>${f(kp)}</b>${kp >= 2 ? ' → 국내 코인 수요가 해외보다 강해 국내 가격이 비싼 상태' : kp <= 0 ? ' → 국내 가격이 해외보다 싸거나 같은 상태(역프)' : ''}`;
+    if (ok('^KS11')) t += `. 코스피 ${f(c('^KS11'))}${ok('^KQ11') ? `, 코스닥 ${f(c('^KQ11'))}` : ''}`;
+    if (t) R.push('한국: ' + t + '.'); }
+  // 6. 가장 크게 움직인 자산의 첫 뉴스 제목(왜 움직였나에서 받아 둔 것)
+  { const top = AUTO.filter(s => NEWS[META[s][3]] && NEWS[META[s][3]].items.length).slice(0, 2);
+    if (top.length) R.push('관련 뉴스: ' + top.map(s => { const it = NEWS[META[s][3]].items[0]; return `${esc(META[s][1])} — <a href="${esc(it.u)}" target="_blank" rel="noopener">“${esc(dent(it.t))}”</a>`; }).join(' · ')); }
+  $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3><ol>${R.map(t => `<li>${t}</li>`).join('')}</ol><p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
+}
 const NEWS = {};
 async function news(q){ if (NEWS[q] && Date.now() - NEWS[q].at < 6e5) return NEWS[q].items;
   try { const j = await fetch(`${PROXY}/news?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : null); const it = (j && j.items) || []; NEWS[q] = {at: Date.now(), items: it}; return it; } catch(e) { return []; } }
@@ -3362,6 +3406,7 @@ async function renderWhy(){
   $('mkWhyT').textContent = SEL ? `${META[SEL][1]} 뉴스` : '왜 움직였나 · 가장 크게 움직인 3개';
   const parts = await Promise.all(L.map(async s => { const q = D && D.q[s], c = chg(q), it = await news(META[s][3]);
     return `<h4><span>${esc(META[s][1])}</span><b class="${c > 0 ? 'up' : 'down'}">${c == null ? '' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'}</b><span class="hint">평소의 ${Math.abs(sc(s)).toFixed(1)}배</span></h4>${nl(it, SEL ? 8 : 3)}`; }));
+  if (!SEL) renderRead();
   $('mkWhy').innerHTML = `<div class="mk-why">${parts.join('')}</div>${SEL ? '<p class="hint" style="margin-top:8px"><a href="#market" data-auto>← 가장 크게 움직인 것 보기</a></p>' : ''}`;
 }
 const ISS = [['미국 증시', '뉴욕증시 마감'], ['한국 증시', '코스피 마감'], ['코인', '비트코인 시황'], ['환율 · 금리', '환율 금리']];
@@ -3375,13 +3420,13 @@ async function load(){
     if (j && j.q) { D = j; try { localStorage.setItem('mkt-last', JSON.stringify(j)); } catch(e){} }
     $('mkTime').textContent = D ? `${new Date(D.at * 1000 + 9 * 3600e3).toISOString().slice(11, 16)} 기준 · 1분마다 갱신` : '시세를 받지 못했어요';
   } catch(e) { $('mkTime').textContent = '시세를 받지 못했어요'; }
-  busy = false; renderMood(); renderMap(); renderWhy();
+  busy = false; renderMood(); renderRead(); renderMap(); renderWhy();
 }
 try { D = JSON.parse(localStorage.getItem('mkt-last') || 'null'); } catch(e){}
 $('mkMap').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; SEL = SEL === b.dataset.s ? null : b.dataset.s; renderMap(); renderWhy();
   if (SEL && matchMedia('(max-width:900px)').matches) $('mkWhyCard').scrollIntoView({behavior: 'smooth', block: 'start'}); });
 $('mkWhyCard').addEventListener('click', e => { if (e.target.closest('[data-auto]')) { e.preventDefault(); SEL = null; renderMap(); renderWhy(); } });
-window.marketShow = () => { if (D) { renderMood(); renderMap(); renderWhy(); } load(); renderIssues(); if (!timer) timer = setInterval(load, 60000); };
+window.marketShow = () => { if (D) { renderMood(); renderRead(); renderMap(); renderWhy(); } load(); renderIssues(); if (!timer) timer = setInterval(load, 60000); };
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('tab-market').hidden) load(); });
 if (!$('tab-market').hidden) window.marketShow();
 })();
