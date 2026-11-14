@@ -450,6 +450,23 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .td-row .r{flex:none;display:flex;gap:6px;align-items:center}
 .td-row .when{font:600 12.5px var(--font);color:var(--muted);min-width:64px}
 .td-row.hot{font-weight:600}
+.td-ipos{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.tdi{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+.tdi::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--c,#d8cfc2)}
+.tdi.ev-s{--c:#f0a06a} .tdi.ev-l{--c:#7aaee0} .tdi.ev-r{--c:#6cc49e} .tdi.ev-p{--c:#e3a26f}
+.tdi .t1{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tdi .t1 b{font-size:16px;letter-spacing:-.02em}
+.tdi .ev{font:700 12.5px var(--font);border-radius:999px;padding:2px 9px;color:#fff;background:var(--c)}
+.tdi .meta{font-size:13.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px}
+.tdi .meta b{color:var(--ink);font-weight:600}
+.tdi .bks{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:13.5px}
+.tdi .act{font-size:13.5px;font-weight:600;color:var(--ink)}
+.tdi .mine{margin-left:auto;color:#e0a100}
+.td-us{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:2px}
+.td-us .kpi{border:1px solid var(--line);border-radius:12px}
+.td-mv{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;font-size:14px;margin-top:10px;align-items:baseline}
+.td-mv span:nth-child(3n+1){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-mv span:nth-child(3n+2),.td-mv span:nth-child(3n){text-align:right;font-family:var(--mono)}
 .td-empty{color:var(--muted);font-size:14px;margin:4px 0}
 .cyc td,.cyc th{white-space:nowrap}
 .cyc .rule{font-size:13px;color:var(--muted)}
@@ -2127,7 +2144,8 @@ $('ipoUp').addEventListener('click', e => {
   saveAcc(); renderUp(); renderRes();
 });
 $('calPrev').addEventListener('click', () => shiftM(-1));
-window.ipoAPI = {upcoming, rec, REC, isSpac, sd, mine: () => ACC.mine || [], own: OWN};
+window.ipoAPI = {upcoming, rec, REC, isSpac, sd, mine: () => ACC.mine || [], own: OWN, bkIco, bkSort, status, won, whoDots, scoreTag, phase,
+  minM: u => { const lo = u.price || +(u.band||'').split('~')[0].replace(/,/g,'') || null; return lo ? lo * 10 * (u.margin || 50) / 100 : null; }};
 $('calNext').addEventListener('click', () => shiftM(1));
 function renderStats(){
   const P = pool(ACC.period, ACC.spac === '1');
@@ -3161,6 +3179,14 @@ $('usD').value = today(); pxLabel(); render();
 let on = false;
 const prevShow = window.etfShow;
 window.etfShow = () => { prevShow && prevShow(); if (!on) { on = true; refresh(); setInterval(refresh, 60000); } };
+let usAt = 0;
+window.usToday = async (force) => {
+  if (!PF.trades.length) return null;
+  if (force || Date.now() - usAt > 60000) { usAt = Date.now(); if (!on) await refresh(); }
+  const c = calc(); if (!c.H.length) return null;
+  return {val: c.val, valU: c.valU, cost: c.cost, costU: c.costU, day: c.day, dayU: c.dayU, fx: FX, have: c.have,
+    rows: c.H.map(p => { const q = Q[p.sym]; return {name: nameOf(p.sym), sym: p.sym, day: p.day, dayU: p.dayU, val: p.val, pct: q && q.prev ? q.px / q.prev - 1 : null}; })};
+};
 document.addEventListener('visibilitychange', () => { if (on && !document.hidden) refresh(); });
 if (!document.getElementById('tab-etf').hidden) window.etfShow();
 })();
@@ -3245,7 +3271,9 @@ const T0 = () => new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
 const add = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
 const WD = ['일','월','화','수','목','금','토'];
 const li = (st, t, d) => window.chkLi ? window.chkLi({st, t, d}) : `<li>${t}</li>`;
-let busy = false;
+let busy = false, US_LAST = null, usBusy = false;
+function usPull(){ if (usBusy || !window.usToday) return; usBusy = true;
+  window.usToday().then(r => { const ch = JSON.stringify(r) !== JSON.stringify(US_LAST); US_LAST = r; usBusy = false; if (ch) window.todayRender(); }).catch(() => { usBusy = false; }); }
 window.todayRender = function(){
   if (busy || $('tab-today').hidden) return; busy = true;
   try {
@@ -3261,27 +3289,45 @@ window.todayRender = function(){
     if (X) { const top = X.R.filter(r => r.st !== 'info' && !/지금 김프/.test(r.t)).slice(0, 4);
       ks += `<p class="hint" style="margin:10px 0 0;font-weight:600;color:var(--ink)">${esc(X.big)}</p>${top.length ? `<ul class="chk">${top.map(window.chkLi).join('')}</ul>` : ''}<p class="hint" style="margin-top:8px"><a href="#kimp">매수 전 점검 전체 보기 →</a></p>`; }
     S.push(ks + '</div>');
-    // 공모주
+    // 미국주식(내 기기에 기록이 있을 때만): 최근 거래일 하루 손익 원화·달러
+    if (US_LAST) {
+      const u = US_LAST, sg = v => v == null ? '–' : (v >= 0 ? '+' : '−'), cl = v => v > 0 ? 'up' : v < 0 ? 'down' : '';
+      const mw = v => v == null || !isFinite(v) ? '–' : sg(v) + Math.round(Math.abs(v) / 1e4).toLocaleString('ko-KR') + '만원';
+      const ud = v => v == null || !isFinite(v) ? '–' : sg(v) + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+      const base = u.val - u.day, baseU = u.valU - u.dayU, pc = (a, b) => b ? ((a / b >= 0 ? '+' : '') + (a / b * 100).toFixed(2) + '%') : '';
+      const R = u.rows.filter(r => r.day != null).sort((a, b) => Math.abs(b.day) - Math.abs(a.day)).slice(0, 5);
+      S.push(`<div class="td-sec"><h3>미국주식 · 최근 거래일 손익</h3><div class="td-us">
+        <div class="kpi"><span class="k">하루 손익 (원화)</span><span class="v ${cl(u.day)}">${mw(u.day)}</span><span class="s">${pc(u.day, base)} · 환율 변동 포함</span></div>
+        <div class="kpi"><span class="k">하루 손익 (달러)</span><span class="v ${cl(u.dayU)}">${ud(u.dayU)}</span><span class="s">${pc(u.dayU, baseU)} · 환율 빼고</span></div>
+        <div class="kpi"><span class="k">평가액</span><span class="v">${Math.round(u.val / 1e4).toLocaleString('ko-KR')}만원</span><span class="s">$${Math.round(u.valU).toLocaleString('en-US')}${u.fx ? ` · 환율 ${u.fx.toFixed(1)}` : ''}</span></div>
+        <div class="kpi"><span class="k">총 평가손익</span><span class="v ${cl(u.val - u.cost)}">${mw(u.val - u.cost)}</span><span class="s">${pc(u.val - u.cost, u.cost)} · 달러 ${ud(u.valU - u.costU)}</span></div>
+      </div>${R.length ? `<div class="td-mv">${R.map(r => `<span>${esc(r.name)}</span><span class="${cl(r.pct)}">${r.pct == null ? '–' : (r.pct >= 0 ? '+' : '') + (r.pct * 100).toFixed(2) + '%'}</span><span class="${cl(r.day)}">${mw(r.day)}</span>`).join('')}</div>` : ''}<p class="hint" style="margin-top:8px"><a href="#etf">미국 ETF 탭에서 자세히 →</a></p></div>`);
+    }
+    // 공모주: 오늘 일이 있는 종목과 7일 안 일정을 카드로(주관사·공모가·기관경쟁률·확약·최소 증거금·등급)
     if (A) {
       const U = A.upcoming.filter(u => !A.isSpac(u.name)), M = A.mine(), nm = u => esc(u.name.replace(/\s*\(.*?\)/g, ''));
-      const tag = u => { const R = A.rec(u); return R ? `<span class="rec ${A.REC[R.k][1]}">${A.REC[R.k][0]}</span>` : ''; };
-      const star = u => M.includes(u.no) ? ' ★' : '';
-      const row = (hot, when, t, sub, r) => `<div class="td-row${hot ? ' hot' : ''}"><span class="when">${when}</span><span style="flex:1;min-width:0">${t}${sub ? `<small>${sub}</small>` : ''}</span><span class="r">${r || ''}</span></div>`;
-      const I = [];
+      const ACTX = {p: '비례 청약 (마감일 김프 보고 금액)', l: '마통까지 비례 청약', e: '균등 최소 청약', c: '패스 권장', x: '패스', w: '수요예측 결과 대기'};
+      const card = (u, ev, evc) => { const R = A.rec(u), [st] = A.status(u), mm = A.minM(u), mine = M.includes(u.no);
+        return `<div class="tdi ${evc}"><div class="t1"><span class="ev">${ev}</span><b>${nm(u)}</b>${R ? `<span class="rec ${A.REC[R.k][1]}">${A.REC[R.k][0]}</span>` : ''}${u.score != null && A.scoreTag ? A.scoreTag(u.score, u) : ''}${mine ? '<span class="mine" title="내 청약">★</span>' : ''}</div>
+          <div class="bks">${A.bkSort(u).map(A.bkIco).join(' ')}${own && A.whoDots ? A.whoDots(u) : ''}</div>
+          <div class="meta"><span>${u.price ? `공모가 <b>${A.won(u.price)}원</b>` : `밴드 <b>${esc(u.band || '–')}</b>`}</span>${u.inst != null ? `<span>기관 <b>${A.won(u.inst)}:1</b> · 확약 <b>${(u.lock ?? 0).toFixed(1)}%</b></span>` : ''}${mm ? `<span>균등 최소 <b>${A.won(mm)}원</b></span>` : ''}</div>
+          <div class="meta"><span>청약 ${A.sd(u.sub[0])}~${A.sd(u.sub[1])}</span><span>환불 ${u.refund ? A.sd(u.refund) : '–'}</span><span>상장 <b>${u.list ? A.sd(u.list) : '미정'}</b></span><span>${esc(st)}</span></div>
+          ${R && A.phase(u) !== 'wait' ? `<div class="act">👉 ${ACTX[R.k] || ''}</div>` : ''}</div>`; };
+      const today = [], next = [];
       for (const u of U) {
-        if (u.sub && u.sub[1] === T) I.push(row(1, '청약 마감', nm(u) + star(u), `오늘 16시 · ${esc((u.brokers||[]).join('·'))}`, tag(u)));
-        else if (u.sub && u.sub[0] <= T && T < u.sub[1]) I.push(row(0, '청약 중', nm(u) + star(u), `마감 ${A.sd(u.sub[1])} 16시`, tag(u)));
-        if (u.list === T) I.push(row(1, '상장', nm(u) + star(u), '9시 시초가 확인 · 받은 주식은 시초가에 매도', ''));
-        if (u.refund === T) I.push(row(0, '환불', nm(u) + star(u), own ? '마통으로 넣었으면 오늘 갚기' : '청약 증거금이 돌아와요', ''));
+        if (u.sub && u.sub[1] === T) today.push(card(u, '오늘 마감 16시', 'ev-s'));
+        else if (u.sub && u.sub[0] <= T && T < u.sub[1]) today.push(card(u, '청약 중', 'ev-s'));
+        if (u.list === T) today.push(card(u, '오늘 상장 · 9시 시초', 'ev-l'));
+        if (u.refund === T) today.push(card(u, '오늘 환불', 'ev-r'));
       }
-      const N = [];
       for (let i = 1; i <= 7; i++) { const d = add(T, i);
-        for (const u of U) { if (u.sub && u.sub[0] === d) N.push(row(0, A.sd(d), nm(u) + star(u), '청약 시작', tag(u))); if (u.list === d) N.push(row(0, A.sd(d), nm(u) + star(u), '상장', '')); } }
-      S.push(`<div class="td-sec"><h3>공모주 오늘</h3>${I.length ? I.join('') : '<p class="td-empty">오늘은 공모주 일정이 없어요.</p>'}${N.length ? `<h3 style="margin-top:14px">다음 7일</h3>${N.slice(0, 8).join('')}` : ''}<p class="hint" style="margin-top:8px"><a href="#ipo">공모주 탭에서 자세히 →</a></p></div>`);
+        for (const u of U) { if (u.sub && u.sub[0] === d) next.push(card(u, `${A.sd(d)} 청약 시작`, 'ev-p')); if (u.list === d) next.push(card(u, `${A.sd(d)} 상장`, 'ev-l')); } }
+      S.push(`<div class="td-sec"><h3>공모주 오늘</h3>${today.length ? `<div class="td-ipos">${today.join('')}</div>` : '<p class="td-empty">오늘은 청약·상장·환불이 없어요.</p>'}${next.length ? `<h3 style="margin-top:16px">다음 7일</h3><div class="td-ipos">${next.slice(0, 8).join('')}</div>` : ''}<p class="hint" style="margin-top:8px"><a href="#ipo">공모주 탭에서 자세히 →</a></p></div>`);
     }
     // 주인만: 미래적금 공고
     if (P && P.ymf && Date.now() - P.ymf < 30*864e5) S.push(`<div class="td-sec"><h3>청년미래적금</h3><ul class="chk">${li('warn', `새 모집 공고가 떴어요 (${new Date(P.ymf + 9*3600e3).toISOString().slice(5,10).replace('-','/')} 알림)`, '신청 기간 확인하고 첫날 신청 · <a href="https://www.fsc.go.kr/no010101" target="_blank" rel="noopener">금융위 보도자료</a> · <a href="https://fill4young.kinfa.or.kr" target="_blank" rel="noopener">신청 사이트</a>')}</ul></div>`);
     $('tdBody').innerHTML = S.join('');
+    usPull();
   } catch(e) { $('tdBody').innerHTML = '<p class="td-empty">오늘 할 일을 만들지 못했습니다.</p>'; }
   busy = false;
 };
