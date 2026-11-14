@@ -632,8 +632,8 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   </section>
 
   <section class="card" id="cycCard" hidden style="margin-bottom:18px">
-    <div class="kc-top"><h2>사이클 복기</h2><p class="hint">투자일지에서 테더를 처음 산 때부터 다 판 때까지를 한 사이클로 묶었습니다. 규칙 매도는 매수 뒤 빗썸 1시간 종가가 1.5% 이상인 첫 시각(평일 9~13시는 폰을 못 봐서 제외)입니다.</p></div>
-    <div class="tablewrap cyc" style="margin-top:6px"><table><thead><tr><th>기간</th><th>보유</th><th>수량</th><th>매수 김프</th><th>매도 김프</th><th>테더 손익</th><th>선물 손익</th><th>마통 이자</th><th>합계</th><th>규칙(1.5%) 매도였다면</th></tr></thead><tbody id="cycRows"></tbody></table></div>
+    <div class="kc-top"><h2>사이클 복기</h2><p class="hint">투자일지에서 테더를 처음 산 때부터 다 판 때까지를 한 사이클로 묶었습니다. 규칙 매도는 매수 뒤 빗썸 1시간 종가가 내 매도선 이상인 첫 시각(평일 9~13시는 폰을 못 봐서 제외)입니다.</p></div>
+    <div class="tablewrap cyc" style="margin-top:6px"><table><thead><tr><th>기간</th><th>보유</th><th>수량</th><th>매수 김프</th><th>매도 김프</th><th>테더 손익</th><th>선물 손익</th><th>마통 이자</th><th>합계</th><th>규칙 매도였다면</th></tr></thead><tbody id="cycRows"></tbody></table></div>
     <p class="hint" style="margin-top:8px" id="cycNote"></p>
   </section>
 
@@ -1696,7 +1696,8 @@ function ipoPending(){
 const md2 = s => +s.slice(5,7) + '/' + +s.slice(8,10);
 function chkState(c){   // 지금 단계와 점검 항목. '오늘' 탭도 같은 결과를 쓴다
   const P = PLANP; if (!P || !P.plan) return null;
-  const pl = P.plan, L = P.L || [0, 1.5, -1.0], px = LIVE.tick.bithumb, fx = LIVE.fx, k = px && fx ? (px/fx-1)*100 : null;
+  if (!P.L) return null;
+  const pl = P.plan, L = P.L, px = LIVE.tick.bithumb, fx = LIVE.fx, k = px && fx ? (px/fx-1)*100 : null;
   const held = c.qty, full = pl.t1 + pl.t2;
   const stage = held < 1000 ? 1 : held < full - 5000 ? 2 : 3;
   const R = [], add = (st, t, d) => R.push({st, t, d});
@@ -1726,7 +1727,7 @@ function chkState(c){   // 지금 단계와 점검 항목. '오늘' 탭도 같�
       const used = c.loan * (px || fx), add2 = loanUsd * pw, top = Math.max(0, gap), rest = pl.loanLimit * 1e4 - used - add2 - top;
       add(rest >= 0 ? 'ok' : 'no', `마통 한도 남는 돈 약 ${man(Math.max(0, rest))}`, `한도 ${pl.loanLimit.toLocaleString('ko-KR')}만원 − 이미 쓴 ${man(used)} − 이번 ${man(add2)}${top ? ` − 선물 계좌 ${man(top)}` : ''}${rest < 0 ? ' → 한도 초과' : ''}`);
     }
-    if (stage === 1) add('info', '하루쯤 0% 아래에 머무는지 보고 사도 성적이 비슷했어요', '빗썸 1시간봉 2024-02~: 바로 사기 2,968만 · 24시간 머문 뒤 사기 3,201만');
+    if (stage === 1 && pl.tip1) add('info', pl.tip1[0], pl.tip1[1]);
   } else big = `다 산 상태 · 매도 기다리는 중`;
   if (held >= 1000) {
     if (k == null) {}
@@ -1772,13 +1773,13 @@ function cycles(){
   }
   return C;
 }
-// 규칙 매도: 마지막 매수 뒤 빗썸 1시간 종가가 1.5% 이상인 첫 봉(평일 9~13시 마감 봉은 못 봐서 뺀다)
+// 규칙 매도: 마지막 매수 뒤 빗썸 1시간 종가가 매도선(주인 기기만 중계 서버에서 받음) 이상인 첫 봉(평일 9~13시 마감 봉은 못 봐서 뺀다)
 function ruleSell(from, to){
-  const h = SERH.bithumb; if (!h) return null;
+  const h = SERH.bithumb, SL = PLANP && PLANP.L ? PLANP.L[1] : null; if (!h || SL == null) return null;
   for (let i = 0; i < h.n; i++){ const t = h.t[i]; if (t <= from) continue; if (to && t > to + 30*DAY) break;
     const g = new Date((t+KST)*1000), wd = g.getUTCDay(), hr = g.getUTCHours();
     const blind = wd >= 1 && wd <= 5 && hr >= 9 && hr <= 13, trade = (wd >= 1 && wd <= 5 && (hr >= 9 && hr <= 15 || hr >= 18)) || (wd >= 2 && wd <= 6 && hr <= 5);
-    if (h.k[i] != null && h.k[i] >= 1.5 && trade && !blind) return {t, k: h.k[i]}; }
+    if (h.k[i] != null && h.k[i] >= SL && trade && !blind) return {t, k: h.k[i]}; }
   return null;
 }
 function renderCyc(){
@@ -1794,7 +1795,7 @@ function renderCyc(){
     const r = ruleSell(c.last, c.b); let rt = '–';
     if (r && sk != null){ const diff = c.sp * ((1 + r.k/100)/(1 + sk/100) - 1), dd = (r.t - c.b)/DAY;
       rt = `${d(r.t)} ${new Date((r.t+KST)*1000).getUTCHours()}시 ${fmtK(r.k)} · <span class="${cls(diff)}">${sg(diff)}</span> <span class="rule">(${Math.abs(dd) < 0.5 ? '같은 때' : dd < 0 ? `${(-dd).toFixed(0)}일 먼저` : `${dd.toFixed(0)}일 늦게`})</span>`; }
-    else if (!r) rt = '<span class="rule">그 사이 1.5%에 안 닿음</span>';
+    else if (!r) rt = PLANP && PLANP.L ? '<span class="rule">그 사이 매도선에 안 닿음</span>' : '–';
     return `<tr><td>${d(c.a)} ~ ${d(c.b)}</td><td>${days.toFixed(0)}일</td><td>${Math.round(c.q).toLocaleString('ko-KR')}</td><td>${bk!=null?fmtK(bk):'–'}</td><td>${sk!=null?fmtK(sk):'–'}</td>`
       + `<td class="${cls(usdt)}">${sg(usdt)}</td><td class="${cls(c.fut)}">${c.fut ? sg(c.fut) : '–'}${c.roll ? `<br><span class="rule">롤오버 ${sg(c.roll)} 포함</span>` : ''}</td><td>${c.li ? '−' + man(c.li) : '–'}</td><td class="${cls(tot)}"><b>${sg(tot)}</b></td><td>${rt}</td></tr>`;
   }).join('');
