@@ -493,6 +493,8 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .mk-warn ul{margin:4px 0 0;padding-left:18px;display:grid;gap:4px}
 .mk-warn li{font-size:15.5px;line-height:1.55}
 .mk-rl{display:grid;gap:8px}
+.rdg+.rdg{margin-top:14px}
+.rdh{font:800 14px var(--font);color:var(--muted);margin:0 0 6px 2px;letter-spacing:.02em}
 .mk-read .rd{display:grid;grid-template-columns:132px 1fr;gap:10px;align-items:start;padding:9px 12px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--panel));border-left:4px solid var(--c)}
 .mk-read .rd .lb{font:800 14px/1.7 var(--font);color:var(--c);white-space:nowrap}
 .mk-read .rd .tx{font-size:16px;line-height:1.7}
@@ -3457,6 +3459,14 @@ function renderMood(){
 }
 // 읽기 한 줄: 앞의 '라벨:'을 색 칩으로 바꿔 구역마다 눈에 띄게
 const RLB = {'미국 증시': ['🇺🇸', '#3f7fd0'], '미국 선물': ['⏱️', '#5a8fd8'], '코인': ['🪙', '#e08a1e'], '비트코인 파생': ['📊', '#c0662a'], '금리·안전자산': ['🏦', '#2e9d72'], '미국 섹터': ['🧩', '#7a5cc8'], '한국': ['🇰🇷', '#d0457e'], '관련 뉴스': ['📰', '#6b6370']};
+// 순서: 미국(증시·선물·금리·섹터) → 코인·한국(코인·파생·한국)
+const RORD = ['미국 증시', '미국 선물', '금리·안전자산', '미국 섹터', '코인', '비트코인 파생', '한국'];
+function rdGroups(R){
+  const lab = t => { const m = t.match(/^([^:<]{2,10}):/); return m ? m[1] : ''; }, idx = t => { const i = RORD.indexOf(lab(t)); return i < 0 ? 99 : i; };
+  const S = R.slice().sort((a, b) => idx(a) - idx(b)), us = S.filter(t => idx(t) <= 3), ck = S.filter(t => idx(t) > 3);
+  const g = (h, L) => L.length ? `<div class="rdg"><div class="rdh">${h}</div><div class="mk-rl">${L.map(rdRow).join('')}</div></div>` : '';
+  return g('미국', us) + g('코인 · 한국', ck);
+}
 function rdRow(t){ const m = t.match(/^([^:<]{2,10}):\s*/), k = m && RLB[m[1]] ? m[1] : null, [ic, col] = k ? RLB[k] : ['•', '#6b6370'];
   return `<div class="rd" style="--c:${col}"><span class="lb">${ic} ${k || ''}</span><span class="tx">${k ? t.slice(m[0].length) : t}</span></div>`; }
 // 오늘의 시장 읽기: 지표끼리 견줘서 규칙으로 몇 문장을 만든다(해석은 하되 전망·매매 권유는 하지 않음)
@@ -3520,7 +3530,7 @@ function renderRead(){
   const mood = !rk.length ? '' : rk.every(s => /-USD$/.test(s)) ? `주식 장이 닫혀 있고 코인이 24시간 ${c('BTC-USD') >= 0 ? '오르는' : '빠지는'} 중` : upN === rk.length ? '위험자산이 같이 오르는 날' : upN === 0 ? '위험자산이 같이 빠지는 날' : '자산마다 방향이 엇갈리는 날';
   const lead = Object.keys(META).filter(s => D.q[s] && fresh(s)).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 2).map(s => META[s][1]).join('·');   // 지금 열린 시장 중에서
   const con = mood ? `${mood}이에요${lead ? ` (가장 크게 움직인 것: ${esc(lead)})` : ''}. ${W.length >= 3 ? '불안 신호가 여러 개 겹쳐 있어서 <b>변동성이 큰 구간</b>이에요. 새로 들어가기보다 정해 둔 규칙대로만 움직이는 게 좋은 날이에요.' : W.length ? '주의할 신호가 있어요. 아래 주의를 확인하세요.' : '눈에 띄는 과열·공포 신호는 없어요.'}` : '';
-  $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3>${con ? `<div class="mk-con"><b class="h">결론</b>${con}</div>` : ''}<div class="mk-rl">${R.map(rdRow).join('')}</div>${W.length ? `<div class="mk-warn"><b class="h">⚠️ 주의</b><ul>${W.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}<p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
+  $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3>${con ? `<div class="mk-con"><b class="h">결론</b>${con}</div>` : ''}${rdGroups(R)}${W.length ? `<div class="mk-warn"><b class="h">⚠️ 주의</b><ul>${W.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}<p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
 }
 // 기간 차트(야후 차트 중계)
 const RNG = [['1d','1일','5m'],['5d','1주','30m'],['1mo','1달','1d'],['6mo','6달','1d'],['1y','1년','1d'],['5y','5년','1wk'],['max','전체','1mo']];
