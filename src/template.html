@@ -30,7 +30,7 @@ h1{font-size:25px;font-weight:700;margin:0;letter-spacing:-.02em;text-wrap:balan
 .chip b{font-family:var(--mono);color:var(--ink);font-weight:500}
 .grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
-aside{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(120,60,90,.10);padding:16px;display:flex;flex-direction:column;gap:14px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(120,60,90,.05),0 6px 18px rgba(120,60,90,.06);padding:16px;display:flex;flex-direction:column;gap:14px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
 @media (max-width:900px){aside{position:static;max-height:none}}
 .grp{display:flex;flex-direction:column;gap:6px}
 .lbl{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.02em}
@@ -61,8 +61,8 @@ main{display:flex;flex-direction:column;gap:18px;min-width:0}
 .kpi .v{font:500 23px var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .kpi .s{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .up{color:var(--up)} .down{color:var(--down)}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(120,60,90,.10);padding:14px 14px 10px;min-width:0}
-.card h2{font-size:16px;font-weight:600;margin:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(120,60,90,.05),0 6px 18px rgba(120,60,90,.06);padding:16px 16px 12px;min-width:0}
+.card h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em}
 .card .head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 14px;margin-bottom:8px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
 .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
@@ -202,10 +202,12 @@ input[type=datetime-local]{width:100%;font:500 14px var(--mono);color:var(--ink)
 .pf-del:hover{color:var(--up)}
 /* 상단 탭 + 공모주 */
 .tabs{align-items:center}
-.brand{font:700 17px var(--font);color:var(--ink);background:var(--glass);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;white-space:nowrap;margin-right:4px}
-.tabs{max-width:1320px;margin:0 auto;padding:12px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.brand{font:700 17px var(--font);color:var(--ink);background:transparent;padding:6px 8px 6px 2px;border-radius:999px;white-space:nowrap;margin-right:4px}
+.tabs{max-width:1320px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--tkh,35px);z-index:4;background:var(--glass);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 0 0 100vmax var(--glass);clip-path:inset(0 -100vmax);border-bottom:1px solid var(--line)}
 .tabs a{font:600 15px var(--font);color:var(--muted);text-decoration:none;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);white-space:nowrap}
-.tabs a[aria-current="page"]{background:linear-gradient(120deg,#ff9a76,#f07aa6 55%,#a78bfa);color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(200,90,140,.35)}
+.tabs a[aria-current="page"]{background:linear-gradient(120deg,#ff9a76,#f07aa6 55%,#a78bfa);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(200,90,140,.25)}
+.tabs a{transition:background .15s,color .15s}
+.tabs a:not([aria-current="page"]):hover{color:var(--ink);background:var(--soft)}
 .ipo-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
 .ipo{border:1px solid var(--line);border-radius:9px;padding:11px 12px;display:flex;flex-direction:column;gap:5px;min-width:0}
 .ipo.now{border-color:var(--up);box-shadow:inset 3px 0 0 var(--up)}
@@ -434,7 +436,20 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .chk-head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
 .chk-big{font:800 20px var(--font);letter-spacing:-.02em}
 .td-grid{display:grid;gap:14px}
-.td-sec h3{margin:0 0 6px;font-size:16px}
+.td-sec h3{margin:0 0 6px;font:700 13px var(--font);color:var(--muted);letter-spacing:.02em}
+.td-sec + .td-sec{border-top:1px solid var(--line);padding-top:14px}
+.td-hero{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.td-hero .big{font:700 40px/1.1 var(--mono);letter-spacing:-.04em}
+.td-hero .badge{font:700 13px var(--font);border-radius:999px;padding:3px 10px;background:var(--soft);color:var(--muted)}
+.td-hero .badge.up{background:color-mix(in srgb,var(--up) 13%,transparent);color:var(--up)}
+.td-hero .badge.down{background:color-mix(in srgb,var(--down) 13%,transparent);color:var(--down)}
+.td-hero .sub{flex-basis:100%;font-size:13px;color:var(--muted)}
+.td-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 2px;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);font-size:15px}
+.td-row:last-child{border-bottom:0}
+.td-row small{display:block;color:var(--muted);font-size:13px}
+.td-row .r{flex:none;display:flex;gap:6px;align-items:center}
+.td-row .when{font:600 12.5px var(--font);color:var(--muted);min-width:64px}
+.td-row.hot{font-weight:600}
 .td-empty{color:var(--muted);font-size:14px;margin:4px 0}
 .cyc td,.cyc th{white-space:nowrap}
 .cyc .rule{font-size:13px;color:var(--muted)}
@@ -513,6 +528,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
       <label class="field"><span id="pfHedgeL">헤지 (계약 수)</span><input type="number" id="pfHedge" min="0" step="1" placeholder="0"></label>
       <label class="field"><span id="pfHpL">달러선물 가격 (원)</span><input type="number" id="pfHp" min="0" step="0.1" placeholder="예: 1339.5"></label>
       <label class="field" id="pfHp2F" hidden><span>새 월물 매도가 (원)</span><input type="number" id="pfHp2" min="0" step="0.1" placeholder="예: 1362.5"></label>
+      <label class="field"><span>선물계좌 넣어 둔 돈 (만원)</span><input type="number" id="pfFb" min="0" step="1" placeholder="바뀌었을 때만"></label>
       <button type="submit" class="btn">기록 추가</button>
     </form>
     <p class="hint" id="pfHint"></p>
@@ -1439,6 +1455,7 @@ function upbitWS(){
   ws.onclose = () => setTimeout(upbitWS, 5000);
 }
 upbitWS();
+{ const tkb = document.querySelector('.ticker'); const fit = () => document.documentElement.style.setProperty('--tkh', (tkb ? tkb.offsetHeight : 35) + 'px'); fit(); addEventListener('resize', fit); }
 // 마지막으로 받은 시세를 이 기기에 남겨 두고, 다음에 열 때 연결 전에도 먼저 보여 준다(3일 넘은 값은 안 씀)
 const TKC = 'tk-last', TKI = ['tkUk','tkBk','tkBtc','tkFx','tkUp','tkBp'];
 try { const c = JSON.parse(localStorage.getItem(TKC) || 'null');
@@ -1487,7 +1504,7 @@ function fxAt(ts, ex){   // 그 시각 환율: 최근이면 실시간, 아니면
   return LIVE.fx || null;
 }
 function pfCalc(){
-  const pos = {}, now = Date.now()/1000; let realized = 0, sells = 0, hedge = 0, interest = 0;
+  const pos = {}, now = Date.now()/1000, ry = {}; let realized = 0, sells = 0, hedge = 0, interest = 0;   // ry: 연도별 테더 실현손익(코인 과세 계산용)
   let fq = 0, fcost = 0, fReal = 0, fRoll = 0;   // fRoll: 지금 헤지가 이어지는 동안 쌓인 롤오버 비용(새 월물 − 기존 월물 가격 차이). 평균가에 이미 녹아 있다   // 달러선물 매도 헤지: 보유 계약, 진입가 합, 청산 손익(1계약 = 1만 달러)
   const rate = (S.rate || 0) / 100;
   for (const t of PF.trades.slice().sort((a,b) => a.t-b.t)){
@@ -1506,7 +1523,7 @@ function pfCalc(){
       const q = Math.min(t.qty, p.qty); if (!q) continue;
       const share = q/p.qty, c = p.cost*share;
       if (t.fund==='loan' && p.since!=null) interest += c * rate * (t.t - p.since) / (365*DAY);
-      realized += q*t.px*(1-fee) - c; sells++;
+      realized += q*t.px*(1-fee) - c; sells++; { const y = new Date((t.t+KST)*1000).getUTCFullYear(); ry[y] = (ry[y]||0) + q*t.px*(1-fee) - c; }
       p.qty -= q; p.cost -= c; p.kc -= p.kc*share; hedge -= t.hedge||0;
       if (t.hedge && t.hp && fq){ const n = Math.min(t.hedge, fq), avg = fcost/fq; fReal += n*1e4*(avg - t.hp); fq -= n; fcost -= n*avg; if (!fq) fRoll = 0; }
       if (p.qty < 1e-9){ p.qty = 0; p.cost = 0; p.kc = 0; p.since = null; }
@@ -1521,7 +1538,16 @@ function pfCalc(){
     if (px && LIVE.fx && p.kc){ const kb = p.kc/p.cost, kn = (px/LIVE.fx-1)*100; hedgedPnl += p.cost*((1+kn/100)/(1+kb/100)*(1-fee)-1); haveK++; }
   }
   const fAvg = fq ? fcost/fq : null, fPnl = fq && LIVE.fx ? fq*1e4*(fAvg - LIVE.fx) : null;
-  return {qty, cost, kAvg: cost ? kc/cost : null, value, own, loan, realized, sells, hedge, interest, hedgedPnl, haveK, fq, fAvg, fPnl, fReal, fRoll};
+  return {ry, qty, cost, kAvg: cost ? kc/cost : null, value, own, loan, realized, sells, hedge, interest, hedgedPnl, haveK, fq, fAvg, fPnl, fReal, fRoll};
+}
+// 세금: KRX 미국달러선물은 양도세 비과세(과세는 유렉스 연계 등 해외 파생상품). 코인(테더)은 현행법상 2027년부터 연 250만원 공제 후 22%,
+// 같은 해 코인끼리만 손익을 합치고 선물 손익과는 못 합친다. 2026-11-11 여야가 2029년으로 2년 유예 잠정 합의(국회 통과 전) → 통과되면 TAX_START를 2029로
+const TAX_START = 2027;
+function taxTxt(c){
+  const y = new Date(Date.now() + KST*1000).getUTCFullYear(), g = c.ry[y] || 0;
+  if (y < TAX_START) return `<span title="KRX 달러선물은 비과세. 코인은 현행법상 ${TAX_START}년부터 250만원 넘는 이익에 22% (2029년 유예 잠정 합의, 국회 통과 전)">올해(1~12월) 세금 0원 · 선물 비과세 · 코인 과세 ${TAX_START}년~</span>`;
+  const tax = Math.max(0, g - 250e4) * 0.22;
+  return `<span title="1~12월 테더 실현이익 ${man(g)} − 250만원 공제 × 22%. 선물 손실은 못 빼요. KRX 달러선물은 비과세">올해 코인 세금 약 ${man(tax)} · 선물 0원</span>`;
 }
 function pfRollRow(t){   // 금액 칸에 이번 롤오버 비용(월물 가격 차이 × 계약 수)
   const pl = t.hedge*1e4*(t.hp2 - t.hp);
@@ -1540,14 +1566,14 @@ function pfRender(){
     (c.fPnl!=null && c.qty
       ? kpi('테더 + 선물 손익', ((upnl+c.fPnl)>=0?'+':'')+man(upnl+c.fPnl), `테더 ${(upnl>=0?'+':'')+man(upnl)} · 선물 ${(c.fPnl>=0?'+':'')+man(c.fPnl)}${c.fRoll ? ` (롤오버 비용 ${(c.fRoll>=0?'+':'')+won(c.fRoll)}원 포함)` : ''}`, cls(upnl+c.fPnl))
       : kpi('김프 손익 (헤지 기준)', c.haveK ? (c.hedgedPnl>=0?'+':'')+man(c.hedgedPnl) : '–', '선물 가격을 넣으면 실제 헤지 손익으로 계산', cls(c.hedgedPnl))) +
-    kpi('실현손익', c.sells || c.fReal ? ((c.realized+c.fReal)>=0?'+':'')+man(c.realized+c.fReal) : '–', c.sells || c.fReal ? `매도 ${c.sells}회${c.fReal ? ` · 선물 ${(c.fReal>=0?'+':'')+man(c.fReal)}` + " 포함" : ''}` : '매도 0회', cls(c.realized+c.fReal)) +
+    kpi('실현손익', c.sells || c.fReal ? ((c.realized+c.fReal)>=0?'+':'')+man(c.realized+c.fReal) : '–', (c.sells || c.fReal ? `매도 ${c.sells}회${c.fReal ? ` · 선물 ${(c.fReal>=0?'+':'')+man(c.fReal)}` + " 포함" : ''}` : '매도 0회') + ' · ' + taxTxt(c), cls(c.realized+c.fReal)) +
     kpi('달러선물 헤지', c.hedge ? `${c.hedge}계약` : '–', c.fAvg!=null ? `매도 평균 ${c.fAvg.toFixed(1)}원 · 선물 손익은 현재 환율로 추정` : (c.qty ? `보유 ${Math.round(c.qty).toLocaleString('ko-KR')}달러 대비 ${(c.hedge*10000).toLocaleString('ko-KR')}달러` : '1계약 = 1만 달러'), '') +
     kpi('마통 이자 (추정)', c.interest ? man(c.interest) : '–', `연 ${S.rate}% · 마통 보유 기간만`);
   renderChk(c); renderCyc();
   const rows = PF.trades.slice().sort((a,b) => b.t-a.t);
   $('pfRows').innerHTML = rows.length ? rows.map(t => t.side==='roll' ? pfRollRow(t) : `<tr><td>${new Date((t.t+KST)*1000).toISOString().slice(2,16).replace('T',' ')}</td><td>${EXNAME[t.ex]}</td>`
     + `<td class="${t.side==='buy'?'down':'up'}">${t.side==='buy'?'매수':'매도'}</td><td>${t.fund==='loan'?'마통':'내 돈'}</td><td>${(+t.qty).toLocaleString('ko-KR')}</td><td>${(+t.px).toLocaleString('ko-KR')}</td>`
-    + `<td>${won(t.qty*t.px)}</td><td>${t.k!=null?fmtK(t.k):'–'}</td><td>${t.hedge||0}</td><td><button type="button" class="pf-del" data-hp="${t.id}" title="선물 가격 입력·수정" style="color:var(--down)">${t.hp ? (+t.hp).toFixed(1) : '입력'}</button></td><td><button type="button" class="pf-del" data-id="${t.id}" aria-label="기록 삭제">삭제</button></td></tr>`).join('')
+    + `<td>${won(t.qty*t.px)}</td><td>${t.k!=null?fmtK(t.k):'–'}</td><td>${t.hedge||0}${t.fb ? `<br><small class="hint">계좌 ${(+t.fb).toLocaleString('ko-KR')}만</small>` : ''}</td><td><button type="button" class="pf-del" data-hp="${t.id}" title="선물 가격 입력·수정" style="color:var(--down)">${t.hp ? (+t.hp).toFixed(1) : '입력'}</button></td><td><button type="button" class="pf-del" data-id="${t.id}" aria-label="기록 삭제">삭제</button></td></tr>`).join('')
     : `<tr><td colspan="11" style="text-align:center;font-family:var(--font);color:var(--muted);padding:16px">아직 기록이 없습니다.</td></tr>`;
 }
 // ---- 매수 전 점검 (주인 기기만: 금액·마통·선물 계좌는 중계 서버에서 받고 페이지에는 넣지 않는다) ----
@@ -1599,9 +1625,10 @@ function chkState(c){   // 지금 단계와 점검 항목. '오늘' 탭도 같�
     if (held >= 1000 && c.hedge !== needH) add('no', `지금 헤지가 맞지 않아요: 테더 ${Math.round(held).toLocaleString('ko-KR')}개에 선물 ${c.hedge}계약`, `${needH}계약이어야 합니다. 투자일지 기록도 확인`);
     add('info', `산 직후 달러선물 <b>${n}계약 매도</b> → 합계 ${c.hedge + n}계약`, '1계약 = 1만 달러');
     // 증거금
-    if (fx) { const N = c.hedge + n, need = N * (fx * 1e4 * pl.mg + pl.fxUp * 1e4), have = pl.fut * 1e4, gap = need - have;
-      gap > 0 ? add('warn', `선물 계좌에 약 <b>${man(Math.ceil(gap/1e5)*1e5)}</b> 더 넣기`, `${N}계약이면 증거금 ${Math.round(pl.mg*100)}% + 환율 ${pl.fxUp}원 급등 대비로 약 ${man(need)} 필요 · 지금 넣어 둔 돈 ${pl.fut.toLocaleString('ko-KR')}만원 기준`)
-        : add('ok', `선물 계좌 여유 있음`, `${N}계약 기준 필요 약 ${man(need)} · 넣어 둔 돈 ${pl.fut.toLocaleString('ko-KR')}만원`);
+    const fbT = PF.trades.filter(t => t.fb > 0).sort((a,b) => b.t - a.t)[0], fut = fbT ? fbT.fb : pl.fut, futSrc = fbT ? `투자일지 ${md2(new Date((fbT.t+KST)*1000).toISOString().slice(0,10))} 기록` : '기본값(투자일지에 적으면 바뀜)';
+    if (fx) { const N = c.hedge + n, need = N * (fx * 1e4 * pl.mg + pl.fxUp * 1e4), have = fut * 1e4, gap = need - have;
+      gap > 0 ? add('warn', `선물 계좌에 약 <b>${man(Math.ceil(gap/1e5)*1e5)}</b> 더 넣기`, `${N}계약이면 증거금 ${Math.round(pl.mg*100)}% + 환율 ${pl.fxUp}원 급등 대비로 약 ${man(need)} 필요 · 넣어 둔 돈 ${fut.toLocaleString('ko-KR')}만원 (${futSrc})`)
+        : add('ok', `선물 계좌 여유 있음`, `${N}계약 기준 필요 약 ${man(need)} · 넣어 둔 돈 ${fut.toLocaleString('ko-KR')}만원 (${futSrc})`);
       // 마통 한도: 지금 마통으로 산 테더 + 이번 매수의 마통 + 증거금 부족분
       const used = c.loan * (px || fx), add2 = loanUsd * pw, top = Math.max(0, gap), rest = pl.loanLimit * 1e4 - used - add2 - top;
       add(rest >= 0 ? 'ok' : 'no', `마통 한도 남는 돈 약 ${man(Math.max(0, rest))}`, `한도 ${pl.loanLimit.toLocaleString('ko-KR')}만원 − 이미 쓴 ${man(used)} − 이번 ${man(add2)}${top ? ` − 선물 계좌 ${man(top)}` : ''}${rest < 0 ? ' → 한도 초과' : ''}`);
@@ -1689,18 +1716,18 @@ $('pfForm').addEventListener('submit', e => {
   if ($('pfSide').value === 'roll'){
     const t = Math.floor(Date.parse($('pfT').value + ':00+09:00')/1000), n = parseInt($('pfHedge').value)||0, hp = parseFloat($('pfHp').value), hp2 = parseFloat($('pfHp2').value);
     if (!(t>0) || !(n>0) || !(hp>0) || !(hp2>0)){ $('pfHint').textContent = '일시, 계약 수, 청산가, 새 매도가를 모두 넣어 주세요.'; return; }
-    PF.trades.push({id: Date.now().toString(36), t, ex:'bithumb', side:'roll', fund:'own', qty:0, px:0, hedge:n, hp, hp2, k:null});
+    PF.trades.push({id: Date.now().toString(36), t, ex:'bithumb', side:'roll', fund:'own', qty:0, px:0, hedge:n, hp, hp2, k:null, fb: parseFloat($('pfFb').value)||null});
     pfSave(); pfRender();
     $('pfHint').textContent = `롤오버를 기록했습니다: ${n}계약 ${hp.toFixed(1)}원 청산 → ${hp2.toFixed(1)}원 새로 매도`;
-    $('pfHedge').value = ''; $('pfHp').value = ''; $('pfHp2').value = ''; $('pfSide').value = 'buy'; pfSide(); pfDefaults(); return;
+    $('pfHedge').value = ''; $('pfHp').value = ''; $('pfHp2').value = ''; $('pfFb').value = ''; $('pfSide').value = 'buy'; pfSide(); pfDefaults(); return;
   }
   const t = Math.floor(Date.parse($('pfT').value + ':00+09:00')/1000), ex = $('pfEx').value, qty = parseFloat($('pfQty').value), px = parseFloat($('pfPx').value);
   if (!(t>0) || !(qty>0) || !(px>0)){ $('pfHint').textContent = '일시, 수량, 가격을 확인해 주세요.'; return; }
   const f = fxAt(t, ex), k = f ? +((px/f-1)*100).toFixed(3) : null;
-  PF.trades.push({id: Date.now().toString(36), t, ex, side:$('pfSide').value, fund:$('pfFund').value, qty, px, hedge: parseInt($('pfHedge').value)||0, hp: parseFloat($('pfHp').value)||null, k});
+  PF.trades.push({id: Date.now().toString(36), t, ex, side:$('pfSide').value, fund:$('pfFund').value, qty, px, hedge: parseInt($('pfHedge').value)||0, hp: parseFloat($('pfHp').value)||null, k, fb: parseFloat($('pfFb').value)||null});
   pfSave(); pfRender();
   $('pfHint').textContent = `기록했습니다: ${(qty).toLocaleString('ko-KR')} USDT × ${px.toLocaleString('ko-KR')}원` + (k!=null ? ` (그때 김프 ${fmtK(k)}, 환율 ${f.toFixed(2)})` : '');
-  $('pfQty').value = ''; $('pfPx').value = ''; $('pfHedge').value = ''; $('pfHp').value = ''; pfDefaults();
+  $('pfQty').value = ''; $('pfPx').value = ''; $('pfHedge').value = ''; $('pfHp').value = ''; $('pfFb').value = ''; pfDefaults();
 });
 $('pfRows').addEventListener('click', e => {
   const h = e.target.closest('[data-hp]');
@@ -1717,7 +1744,7 @@ $('pfImport').addEventListener('click', () => {
   const s = prompt('백업 코드를 붙여 넣으세요. 이 기기의 기록은 대체됩니다.'); if (!s) return;
   try { const v = JSON.parse(s);
     if (!v || !Array.isArray(v.trades) || !v.trades.every(t => t && t.id && t.t>0 && (t.side==='roll' ? t.hedge>0 && t.hp>0 && t.hp2>0 : t.qty>0 && t.px>0 && FEE[t.ex]!=null && (t.side==='buy'||t.side==='sell') && (t.fund==='own'||t.fund==='loan')))) throw 0;
-    PF = {trades: v.trades.map(t => ({id:String(t.id), t:+t.t, ex:t.ex, side:t.side, fund:t.fund, qty:+t.qty, px:+t.px, hedge:parseInt(t.hedge)||0, hp: +t.hp || null, hp2: +t.hp2 || null, k: t.k==null ? null : +t.k}))};
+    PF = {trades: v.trades.map(t => ({id:String(t.id), t:+t.t, ex:t.ex, side:t.side, fund:t.fund, qty:+t.qty, px:+t.px, hedge:parseInt(t.hedge)||0, hp: +t.hp || null, hp2: +t.hp2 || null, k: t.k==null ? null : +t.k, fb: +t.fb || null}))};
     pfSave(); pfRender(); $('pfHint').textContent = `불러왔습니다(기록 ${PF.trades.length}건).`;
   } catch(e){ $('pfHint').textContent = '백업 코드를 읽지 못했습니다. 복사한 코드 전체를 붙여 넣었는지 확인해 주세요.'; }
 });
@@ -3225,35 +3252,35 @@ window.todayRender = function(){
     const T = T0(), A = window.ipoAPI, P = window.PLANP, own = A && A.own();
     const g = new Date(T + 'T00:00:00Z'); $('tdDate').textContent = `${g.getUTCMonth()+1}월 ${g.getUTCDate()}일 (${WD[g.getUTCDay()]})`;
     const S = [];
-    // 김프
-    const X = window.chkStateNow && window.chkStateNow();
-    if (X) {
-      const top = X.R.filter(r => r.st !== 'info' || /매도선|김프 시세/.test(r.t)).slice(0, 5);
-      S.push(`<div class="td-sec"><h3>💹 테더 김프 · ${esc(X.big)}</h3><ul class="chk">${top.map(window.chkLi).join('')}</ul><p class="hint" style="margin-top:6px"><a href="#kimp">매수 전 점검 전체 보기 →</a></p></div>`);
-    } else {
-      const L = window.LIVE, p = L && L.tick.bithumb, fx = L && L.fx;
-      S.push(`<div class="td-sec"><h3>💹 테더 김프</h3><ul class="chk">${p && fx ? li('info', `빗썸 김프 <b>${((p/fx-1)*100).toFixed(2)}%</b>`, `USDT ${p.toLocaleString('ko-KR')}원 · 환율 ${fx.toFixed(2)}`) : li('info', '시세 연결 중…', '')}</ul></div>`);
-    }
+    // 김프: 큰 숫자 + 상태 배지, 주인은 점검 핵심 줄
+    const LV = window.LIVE, p = LV && LV.tick.bithumb, fx = LV && LV.fx, k = p && fx ? (p/fx-1)*100 : null;
+    const X = window.chkStateNow && window.chkStateNow(), L = X ? X.L : null;
+    let badge = '';
+    if (k != null && L) badge = k <= L[0] ? '<span class="badge down">매수 구간</span>' : k >= L[1] ? '<span class="badge up">매도선 위</span>' : `<span class="badge">매수선까지 ${(k - L[0]).toFixed(2)}%p</span>`;
+    let ks = `<div class="td-sec"><h3>빗썸 테더 김프</h3><div class="td-hero"><span class="big ${k == null ? '' : k > 0 ? 'up' : 'down'}">${k == null ? '–' : (k >= 0 ? '+' : '') + k.toFixed(2) + '%'}</span>${badge}<span class="sub">${p && fx ? `USDT ${p.toLocaleString('ko-KR')}원 · 환율 ${fx.toFixed(2)}` : '시세 연결 중…'}</span></div>`;
+    if (X) { const top = X.R.filter(r => r.st !== 'info' && !/지금 김프/.test(r.t)).slice(0, 4);
+      ks += `<p class="hint" style="margin:10px 0 0;font-weight:600;color:var(--ink)">${esc(X.big)}</p>${top.length ? `<ul class="chk">${top.map(window.chkLi).join('')}</ul>` : ''}<p class="hint" style="margin-top:8px"><a href="#kimp">매수 전 점검 전체 보기 →</a></p>`; }
+    S.push(ks + '</div>');
     // 공모주
     if (A) {
       const U = A.upcoming.filter(u => !A.isSpac(u.name)), M = A.mine(), nm = u => esc(u.name.replace(/\s*\(.*?\)/g, ''));
-      const tag = u => { const R = A.rec(u); return R ? ` <span class="rec ${A.REC[R.k][1]}">${A.REC[R.k][0]}</span>` : ''; };
+      const tag = u => { const R = A.rec(u); return R ? `<span class="rec ${A.REC[R.k][1]}">${A.REC[R.k][0]}</span>` : ''; };
       const star = u => M.includes(u.no) ? ' ★' : '';
-      const act = u => { const R = A.rec(u); return R && (R.k === 'p' || R.k === 'l') ? 'warn' : 'info'; };
+      const row = (hot, when, t, sub, r) => `<div class="td-row${hot ? ' hot' : ''}"><span class="when">${when}</span><span style="flex:1;min-width:0">${t}${sub ? `<small>${sub}</small>` : ''}</span><span class="r">${r || ''}</span></div>`;
       const I = [];
       for (const u of U) {
-        if (u.sub && u.sub[1] === T) I.push(li(act(u), `<b>오늘 청약 마감</b> · ${nm(u)}${star(u)}${tag(u)}`, `16시 마감 · ${esc((u.brokers||[]).join('·'))}`));
-        else if (u.sub && u.sub[0] <= T && T < u.sub[1]) I.push(li('info', `청약 중 · ${nm(u)}${star(u)}${tag(u)}`, `마감 ${A.sd(u.sub[1])} 16시`));
-        if (u.list === T) I.push(li('warn', `<b>오늘 상장</b> · ${nm(u)}${star(u)}`, '9시 시초가 확인 · 받은 주식은 시초가에 매도'));
-        if (u.refund === T) I.push(li('ok', `오늘 환불 · ${nm(u)}${star(u)}`, own ? '마통으로 넣었으면 오늘 갚기' : '청약 증거금이 계좌로 돌아옵니다'));
+        if (u.sub && u.sub[1] === T) I.push(row(1, '청약 마감', nm(u) + star(u), `오늘 16시 · ${esc((u.brokers||[]).join('·'))}`, tag(u)));
+        else if (u.sub && u.sub[0] <= T && T < u.sub[1]) I.push(row(0, '청약 중', nm(u) + star(u), `마감 ${A.sd(u.sub[1])} 16시`, tag(u)));
+        if (u.list === T) I.push(row(1, '상장', nm(u) + star(u), '9시 시초가 확인 · 받은 주식은 시초가에 매도', ''));
+        if (u.refund === T) I.push(row(0, '환불', nm(u) + star(u), own ? '마통으로 넣었으면 오늘 갚기' : '청약 증거금이 돌아와요', ''));
       }
       const N = [];
-      for (let i = 1; i <= 7; i++) { const d = add(T, i), w = `${A.sd(d)}`;
-        for (const u of U) { if (u.sub && u.sub[0] === d) N.push(`${w} 청약 시작 · ${nm(u)}${star(u)}${tag(u)}`); if (u.list === d) N.push(`${w} 상장 · ${nm(u)}${star(u)}`); } }
-      S.push(`<div class="td-sec"><h3>📋 공모주 오늘</h3>${I.length ? `<ul class="chk">${I.join('')}</ul>` : '<p class="td-empty">오늘은 공모주 일정이 없어요.</p>'}${N.length ? `<p class="hint" style="margin:8px 0 4px">다음 7일</p><ul class="chk">${N.slice(0, 8).map(t => li('info', t, '')).join('')}</ul>` : ''}<p class="hint" style="margin-top:6px"><a href="#ipo">공모주 탭에서 자세히 →</a></p></div>`);
+      for (let i = 1; i <= 7; i++) { const d = add(T, i);
+        for (const u of U) { if (u.sub && u.sub[0] === d) N.push(row(0, A.sd(d), nm(u) + star(u), '청약 시작', tag(u))); if (u.list === d) N.push(row(0, A.sd(d), nm(u) + star(u), '상장', '')); } }
+      S.push(`<div class="td-sec"><h3>공모주 오늘</h3>${I.length ? I.join('') : '<p class="td-empty">오늘은 공모주 일정이 없어요.</p>'}${N.length ? `<h3 style="margin-top:14px">다음 7일</h3>${N.slice(0, 8).join('')}` : ''}<p class="hint" style="margin-top:8px"><a href="#ipo">공모주 탭에서 자세히 →</a></p></div>`);
     }
     // 주인만: 미래적금 공고
-    if (P && P.ymf && Date.now() - P.ymf < 30*864e5) S.push(`<div class="td-sec"><h3>🏦 청년미래적금</h3><ul class="chk">${li('warn', `새 모집 공고가 떴어요 (${new Date(P.ymf + 9*3600e3).toISOString().slice(5,10).replace('-','/')} 알림)`, '신청 기간 확인하고 첫날 신청 · <a href="https://www.fsc.go.kr/no010101" target="_blank" rel="noopener">금융위 보도자료</a> · <a href="https://fill4young.kinfa.or.kr" target="_blank" rel="noopener">신청 사이트</a>')}</ul></div>`);
+    if (P && P.ymf && Date.now() - P.ymf < 30*864e5) S.push(`<div class="td-sec"><h3>청년미래적금</h3><ul class="chk">${li('warn', `새 모집 공고가 떴어요 (${new Date(P.ymf + 9*3600e3).toISOString().slice(5,10).replace('-','/')} 알림)`, '신청 기간 확인하고 첫날 신청 · <a href="https://www.fsc.go.kr/no010101" target="_blank" rel="noopener">금융위 보도자료</a> · <a href="https://fill4young.kinfa.or.kr" target="_blank" rel="noopener">신청 사이트</a>')}</ul></div>`);
     $('tdBody').innerHTML = S.join('');
   } catch(e) { $('tdBody').innerHTML = '<p class="td-empty">오늘 할 일을 만들지 못했습니다.</p>'; }
   busy = false;
