@@ -3491,9 +3491,6 @@ function renderRead(){
     if (kp != null) t += `${t ? ', ' : ''}빗썸 테더 김프 <b>${f(kp)}</b>${kp >= 2 ? ' → 국내 코인 수요가 해외보다 강해 국내 가격이 비싼 상태' : kp <= 0 ? ' → 국내 가격이 해외보다 싸거나 같은 상태(역프)' : ''}`;
     if (ok('^KS11')) t += `. 코스피 ${f(c('^KS11'))}${ok('^KQ11') ? `, 코스닥 ${f(c('^KQ11'))}` : ''}`;
     if (t) R.push('한국: ' + t + '.'); }
-  // 6. 가장 크게 움직인 자산의 첫 뉴스 제목(왜 움직였나에서 받아 둔 것)
-  { const top = AUTO.filter(s => NEWS[META[s][3]] && NEWS[META[s][3]].items.length).slice(0, 2);
-    if (top.length) R.push('관련 뉴스: ' + top.map(s => { const it = NEWS[META[s][3]].items[0]; return `${esc(META[s][1])} — <a href="${esc(it.u)}" target="_blank" rel="noopener">“${esc(dent(it.t))}”</a>`; }).join(' · ')); }
   // 주의: 변동성·쏠림·과열 신호가 기준을 넘을 때만
   const W = [], vx = D.q['^VIX'], fg = D.fng && D.fng[0], dB = D.dv && D.dv.BTC, kst = new Date(Date.now() + 9 * 3600e3), wkd = kst.getUTCDay() === 0 || kst.getUTCDay() === 6;
   if (vx && vx.p >= 25) W.push(`공포지수 VIX ${vx.p.toFixed(1)}: 25를 넘으면 하루 변동이 평소보다 커지는 구간이에요.`);
@@ -3548,7 +3545,6 @@ async function renderWhy(){
     drawCh(); return; }
   const parts = await Promise.all(L.map(async s => { const q = D && D.q[s], c = chg(q), it = await news(META[s][3]);
     return `<h4><span>${esc(META[s][1])}</span><b class="${c > 0 ? 'up' : 'down'}">${c == null ? '' : (c >= 0 ? '+' : '') + c.toFixed(2) + '%'}</b><span class="hint">평소의 ${Math.abs(sc(s)).toFixed(1)}배</span></h4>${nl(it, SEL ? 8 : 3)}`; }));
-  if (!SEL) renderRead();
   $('mkWhy').innerHTML = `<div class="mk-why">${parts.join('')}</div>${SEL ? '<p class="hint" style="margin-top:8px"><a href="#market" data-auto>← 가장 크게 움직인 것 보기</a></p>' : ''}`;
 }
 const ISS = [['미국 증시', '뉴욕증시 마감'], ['한국 증시', '코스피 마감'], ['코인', '비트코인 시황'], ['환율 · 금리', '환율 금리']];
