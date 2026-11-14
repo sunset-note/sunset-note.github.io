@@ -3454,7 +3454,7 @@ function renderMood(){
   const f = D.fng && D.fng[0], KO = {'Extreme Fear': '극단적 공포', 'Fear': '공포', 'Neutral': '중립', 'Greed': '탐욕', 'Extreme Greed': '극단적 탐욕'};
   $('mkMood').innerHTML = `<span class="line">${line}</span>` + all.map(([s, n]) => `<span class="pill">${n} <b class="${c(s) > 0 ? 'up' : 'down'}">${(c(s) >= 0 ? '+' : '') + c(s).toFixed(2)}%</b>${fresh(s) ? '' : ` <small class="hint">${basis(s)}</small>`}</span>`).join('') +
     (f ? `<span class="pill">코인 공포·탐욕 <b>${f.v}</b> ${KO[f.c] || f.c}${D.fng[1] ? ` (어제 ${D.fng[1].v})` : ''}</span>` : '') +
-    `<span class="pill">가장 크게 움직인 것: ${big.map(s => `<b>${esc(META[s][1])}</b>`).join(' · ')}</span>`;
+    `<span class="pill">가장 크게 움직인 것: ${big.map(s => { const v = c(s); return `<b class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${esc(META[s][1])} ${(v >= 0 ? '+' : '') + v.toFixed(2)}%</b>`; }).join(' · ')}</span>`;
   AUTO = big;
 }
 // 읽기 한 줄: 앞의 '라벨:'을 색 칩으로 바꿔 구역마다 눈에 띄게
@@ -3528,8 +3528,8 @@ function renderRead(){
   // 결론: 분위기 + 주도 자산 + 주의 개수
   const rk = ['NQ=F', 'BTC-USD', '^KS11', '^SOX'].filter(s => ok(s) && fresh(s)), upN = rk.filter(s => c(s) > 0).length;
   const mood = !rk.length ? '' : rk.every(s => /-USD$/.test(s)) ? `주식 장이 닫혀 있고 코인이 24시간 ${c('BTC-USD') >= 0 ? '오르는' : '빠지는'} 중` : upN === rk.length ? '위험자산이 같이 오르는 날' : upN === 0 ? '위험자산이 같이 빠지는 날' : '자산마다 방향이 엇갈리는 날';
-  const lead = Object.keys(META).filter(s => D.q[s] && fresh(s)).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 2).map(s => META[s][1]).join('·');   // 지금 열린 시장 중에서
-  const con = mood ? `${mood}이에요${lead ? ` (가장 크게 움직인 것: ${esc(lead)})` : ''}. ${W.length >= 3 ? '불안 신호가 여러 개 겹쳐 있어서 <b>변동성이 큰 구간</b>이에요. 새로 들어가기보다 정해 둔 규칙대로만 움직이는 게 좋은 날이에요.' : W.length ? '주의할 신호가 있어요. 아래 주의를 확인하세요.' : '눈에 띄는 과열·공포 신호는 없어요.'}` : '';
+  const lead = Object.keys(META).filter(s => D.q[s] && fresh(s)).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 2).map(s => `<b class="${c(s) > 0 ? 'up' : 'down'}">${esc(META[s][1])} ${f(c(s)).replace(/<[^>]+>/g, '')}</b>`).join(' · ');   // 지금 열린 시장 중에서, 오르면 빨강·내리면 파랑
+  const con = mood ? `${mood}이에요${lead ? ` (가장 크게 움직인 것: ${lead})` : ''}. ${W.length >= 3 ? '불안 신호가 여러 개 겹쳐 있어서 <b>변동성이 큰 구간</b>이에요. 새로 들어가기보다 정해 둔 규칙대로만 움직이는 게 좋은 날이에요.' : W.length ? '주의할 신호가 있어요. 아래 주의를 확인하세요.' : '눈에 띄는 과열·공포 신호는 없어요.'}` : '';
   $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3>${con ? `<div class="mk-con"><b class="h">결론</b>${con}</div>` : ''}${rdGroups(R)}${W.length ? `<div class="mk-warn"><b class="h">⚠️ 주의</b><ul>${W.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}<p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
 }
 // 기간 차트(야후 차트 중계)
