@@ -1627,8 +1627,8 @@ function chkState(c){   // 지금 단계와 점검 항목. '오늘' 탭도 같�
     // 증거금
     const fbT = PF.trades.filter(t => t.fb > 0).sort((a,b) => b.t - a.t)[0], fut = fbT ? fbT.fb : pl.fut, futSrc = fbT ? `투자일지 ${md2(new Date((fbT.t+KST)*1000).toISOString().slice(0,10))} 기록` : '기본값(투자일지에 적으면 바뀜)';
     if (fx) { const N = c.hedge + n, need = N * (fx * 1e4 * pl.mg + pl.fxUp * 1e4), have = fut * 1e4, gap = need - have;
-      gap > 0 ? add('warn', `선물 계좌에 약 <b>${man(Math.ceil(gap/1e5)*1e5)}</b> 더 넣기`, `${N}계약이면 증거금 ${Math.round(pl.mg*100)}% + 환율 ${pl.fxUp}원 급등 대비로 약 ${man(need)} 필요 · 넣어 둔 돈 ${fut.toLocaleString('ko-KR')}만원 (${futSrc})`)
-        : add('ok', `선물 계좌 여유 있음`, `${N}계약 기준 필요 약 ${man(need)} · 넣어 둔 돈 ${fut.toLocaleString('ko-KR')}만원 (${futSrc})`);
+      gap > 0 ? add(k != null && k <= line + late ? 'warn' : 'info', `${stage}차 매수할 때 선물 계좌에 약 <b>${man(Math.ceil(gap/1e5)*1e5)}</b> 더 넣기`, `지금 넣을 필요는 없어요. ${stage}차를 사면 선물이 ${N}계약이 돼서, 증거금 ${Math.round(pl.mg*100)}% + 환율 ${pl.fxUp}원 급등 대비로 약 ${man(need)}이 필요해요 · 넣어 둔 돈 ${fut.toLocaleString('ko-KR')}만원 (${futSrc})`)
+        : add('ok', `${stage}차 매수해도 선물 계좌 여유 있음`, `${N}계약 기준 필요 약 ${man(need)} · 넣어 둔 돈 ${fut.toLocaleString('ko-KR')}만원 (${futSrc})`);
       // 마통 한도: 지금 마통으로 산 테더 + 이번 매수의 마통 + 증거금 부족분
       const used = c.loan * (px || fx), add2 = loanUsd * pw, top = Math.max(0, gap), rest = pl.loanLimit * 1e4 - used - add2 - top;
       add(rest >= 0 ? 'ok' : 'no', `마통 한도 남는 돈 약 ${man(Math.max(0, rest))}`, `한도 ${pl.loanLimit.toLocaleString('ko-KR')}만원 − 이미 쓴 ${man(used)} − 이번 ${man(add2)}${top ? ` − 선물 계좌 ${man(top)}` : ''}${rest < 0 ? ' → 한도 초과' : ''}`);
