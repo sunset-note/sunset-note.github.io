@@ -1545,11 +1545,11 @@ function pfCalc(){
   return {ry, qty, cost, kAvg: cost ? kc/cost : null, value, own, loan, realized, sells, hedge, interest, hedgedPnl, haveK, fq, fAvg, fPnl, fReal, fRoll};
 }
 // 세금: KRX 미국달러선물은 양도세 비과세(과세는 유렉스 연계 등 해외 파생상품). 코인(테더)은 현행법상 2027년부터 연 250만원 공제 후 22%,
-// 같은 해 코인끼리만 손익을 합치고 선물 손익과는 못 합친다. 2026-11-11 여야가 2029년으로 2년 유예 잠정 합의(국회 통과 전) → 통과되면 TAX_START를 2029로
-const TAX_START = 2027;
+// 같은 해 코인끼리만 손익을 합치고 선물 손익과는 못 합친다. 2026-11-11 여야가 2029년으로 2년 유예 합의 → 사용자 요청(11-15)으로 2029년부터 계산
+const TAX_START = 2029;
 function taxTxt(c){
   const y = new Date(Date.now() + KST*1000).getUTCFullYear(), g = c.ry[y] || 0;
-  if (y < TAX_START) return `<span title="KRX 달러선물은 비과세. 코인은 현행법상 ${TAX_START}년부터 250만원 넘는 이익에 22% (2029년 유예 잠정 합의, 국회 통과 전)">올해(1~12월) 세금 0원 · 선물 비과세 · 코인 과세 ${TAX_START}년~</span>`;
+  if (y < TAX_START) return `<span title="KRX 달러선물은 비과세. 코인은 ${TAX_START}년부터 1년(1~12월) 단위로 250만원 넘는 이익에 22% (2027년 시행을 2년 유예)">올해(1~12월) 세금 0원 · 선물 비과세 · 코인 과세 ${TAX_START}년~</span>`;
   const tax = Math.max(0, g - 250e4) * 0.22;
   return `<span title="1~12월 테더 실현이익 ${man(g)} − 250만원 공제 × 22%. 선물 손실은 못 빼요. KRX 달러선물은 비과세">올해 코인 세금 약 ${man(tax)} · 선물 0원</span>`;
 }
