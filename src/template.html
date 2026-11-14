@@ -3436,6 +3436,7 @@ function renderMap(){
 }
 // 시차 처리: 코인은 24시간 내내, 주식은 장이 닫히면 마지막 거래일 값이라 둘을 바로 견주지 않는다
 const TZ = s => /^(\^KS11|\^KQ11|\^N225|\^HSI|000001\.SS)$/.test(s) ? 'Asia/Seoul' : s === '^STOXX50E' ? 'Europe/Berlin' : 'America/New_York';
+const CK = {'extreme fear': '극단적 공포', 'fear': '공포', 'neutral': '중립', 'greed': '탐욕', 'extreme greed': '극단적 탐욕'};
 const fgc = v => v <= 45 ? 'down' : v >= 55 ? 'up' : '';   // 공포는 파랑, 탐욕은 빨강(하락·상승 색과 같은 규칙)
 const fresh = s => { const q = D && D.q[s]; return !!q && (/-USD$/.test(s) || Date.now() / 1000 - q.t < 3 * 3600); };
 const dayOf = s => { const q = D && D.q[s]; return q ? new Date(q.t * 1000).toLocaleDateString('ko-KR', {weekday: 'short', timeZone: TZ(s)}) : ''; };
@@ -3450,6 +3451,7 @@ function renderMood(){
   const big = Object.keys(META).filter(s => D.q[s]).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 3);
   const f = D.fng && D.fng[0], KO = {'Extreme Fear': '극단적 공포', 'Fear': '공포', 'Neutral': '중립', 'Greed': '탐욕', 'Extreme Greed': '극단적 탐욕'};
   $('mkMood').innerHTML = `<span class="line">${line}</span>` + all.map(([s, n]) => `<span class="pill">${n} <b class="${c(s) > 0 ? 'up' : 'down'}">${(c(s) >= 0 ? '+' : '') + c(s).toFixed(2)}%</b>${fresh(s) ? '' : ` <small class="hint">${basis(s)}</small>`}</span>`).join('') +
+    (D.cnn ? `<span class="pill" title="CNN 공포·탐욕: 주가 모멘텀·신고가/신저가·거래 폭·풋콜 비율·정크본드·VIX·안전자산 수요 7개 종합">미국주식 공포·탐욕 <b class="${fgc(D.cnn.v)}">${Math.round(D.cnn.v)} ${CK[D.cnn.c] || D.cnn.c}</b> (어제 ${Math.round(D.cnn.p)} · 1주 전 ${Math.round(D.cnn.w)})</span>` : '') +
     (f ? `<span class="pill">코인 공포·탐욕 <b class="${fgc(f.v)}">${f.v} ${KO[f.c] || f.c}</b>${D.fng[1] ? ` (어제 ${D.fng[1].v})` : ''}</span>` : '') +
     `<span class="pill">가장 크게 움직인 것: ${big.map(s => { const v = c(s); return `<b class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${esc(META[s][1])} ${(v >= 0 ? '+' : '') + v.toFixed(2)}%</b>`; }).join(' · ')}</span>`;
   AUTO = big;
@@ -3488,7 +3490,8 @@ function renderRead(){
     const fg = D.fng && D.fng[0]; if (fg) t += `. 공포·탐욕 지수 <b class="${fgc(fg.v)}">${fg.v}</b>${D.fng[1] ? `(어제 ${D.fng[1].v})` : ''}`;
     R.push(t + '.'); }
   // 4. 안전자산·금리·변동성
-  { const P = []; if (ok('^VIX') && Math.abs(c('^VIX')) >= 3) P.push(`공포지수 VIX ${f(c('^VIX'))}(${D.q['^VIX'].p.toFixed(1)}${D.q['^VIX'].p >= 20 ? ', 20 넘어 불안 구간' : ''})`);
+  { const P = []; if (D.cnn) P.push(`미국주식 공포·탐욕 <b class="${fgc(D.cnn.v)}">${Math.round(D.cnn.v)}</b>(${CK[D.cnn.c] || D.cnn.c}, 1주 전 ${Math.round(D.cnn.w)})`);
+    if (ok('^VIX') && Math.abs(c('^VIX')) >= 3) P.push(`공포지수 VIX ${f(c('^VIX'))}(${D.q['^VIX'].p.toFixed(1)}${D.q['^VIX'].p >= 20 ? ', 20 넘어 불안 구간' : ''})`);
     if (ok('^TNX') && Math.abs(z('^TNX')) >= 0.7) P.push(`미 10년 금리 ${D.q['^TNX'].p.toFixed(2)}%(${c('^TNX') >= 0 ? '상승 → 성장주에 부담' : '하락 → 성장주에 우호적'})`);
     if (ok('GC=F') && Math.abs(z('GC=F')) >= 0.7) P.push(`금 ${f(c('GC=F'))}${c('GC=F') > 0 ? '(안전자산으로 돈 이동)' : ''}`);
     if (ok('DX-Y.NYB') && Math.abs(z('DX-Y.NYB')) >= 0.7) P.push(`달러 인덱스 ${f(c('DX-Y.NYB'))}`);
@@ -3513,6 +3516,8 @@ function renderRead(){
   const W = [], vx = D.q['^VIX'], fg = D.fng && D.fng[0], dB = D.dv && D.dv.BTC, kst = new Date(Date.now() + 9 * 3600e3), wkd = kst.getUTCDay() === 0 || kst.getUTCDay() === 6;
   if (vx && vx.p >= 25) W.push(`공포지수 VIX ${vx.p.toFixed(1)}: 25를 넘으면 하루 변동이 평소보다 커지는 구간이에요.`);
   else if (vx && c('^VIX') >= 10) W.push(`VIX가 하루에 ${f(c('^VIX'))} 뛰었어요. 불안이 빠르게 커지는 중이에요.`);
+  if (D.cnn && D.cnn.v <= 25) W.push(`미국주식 공포·탐욕 ${Math.round(D.cnn.v)}(극단적 공포): 주식 시장도 투매 분위기예요.`);
+  if (D.cnn && D.cnn.v >= 75) W.push(`미국주식 공포·탐욕 ${Math.round(D.cnn.v)}(극단적 탐욕): 주식 시장 과열 구간이에요.`);
   if (fg && fg.v <= 20) W.push(`코인 공포·탐욕 ${fg.v}(극단적 공포): 투매가 나오는 구간이라 하루 폭이 커요. 하락 중에 서둘러 판단하지 않기.`);
   if (fg && fg.v >= 80) W.push(`코인 공포·탐욕 ${fg.v}(극단적 탐욕): 과열 구간이에요. 추격 매수 주의.`);
   if (dB && dB.hf > 30) W.push(`BTC 펀딩비 연 ${dB.hf.toFixed(0)}%: 롱이 많이 쌓여 있어서 급락하면 강제 청산이 연쇄로 나올 수 있어요.`);
