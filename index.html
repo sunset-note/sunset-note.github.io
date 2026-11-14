@@ -3455,7 +3455,7 @@ function rdRow(t){ const m = t.match(/^([^:<]{2,10}):\s*/), k = m && RLB[m[1]] ?
 // 오늘의 시장 읽기: 지표끼리 견줘서 규칙으로 몇 문장을 만든다(해석은 하되 전망·매매 권유는 하지 않음)
 function renderRead(){
   if (!D) return;
-  const c = s => chg(D.q[s]), z = s => sc(s), f = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%', ok = s => c(s) != null;
+  const c = s => chg(D.q[s]), z = s => sc(s), f = v => `<span class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}" style="font-weight:700">${(v >= 0 ? '+' : '') + v.toFixed(2)}%</span>`, ok = s => c(s) != null;   // 숫자는 오르면 빨강, 내리면 파랑
   const R = [];
   // 1. 미국 주식: 지수 방향과 반도체가 주도했는지
   if (ok('^IXIC') && ok('^SOX')) { const n = c('^IXIC'), x = c('^SOX'), sp = ok('^GSPC') ? c('^GSPC') : null, dw = ok('^DJI') ? c('^DJI') : null;
@@ -3486,7 +3486,7 @@ function renderRead(){
   { const d = D.dv && D.dv.BTC; if (d && (d.top || d.hf != null)) { const lp = r => r / (1 + r) * 100, P = [];
     if (d.top) P.push(`OKX 상위 트레이더 롱 비중 ${lp(d.top).toFixed(0)}%${d.top24 ? `(24시간 전 ${lp(d.top24).toFixed(0)}%)` : ''}`);
     if (d.all && d.top) P.push(lp(d.all) - lp(d.top) > 8 ? '일반 계정이 고수보다 롱에 더 쏠려 있어요' : lp(d.top) - lp(d.all) > 8 ? '고수가 일반 계정보다 롱에 더 쏠려 있어요' : '고수와 일반 계정 쏠림이 비슷해요');
-    if (d.hf != null) P.push(`펀딩비 연 ${d.hf >= 0 ? '+' : ''}${d.hf.toFixed(1)}%${d.hf > 30 ? '(롱 과열)' : d.hf < -10 ? '(숏 과열)' : '(과열 아님)'}`);
+    if (d.hf != null) P.push(`펀딩비 연 <span class="${d.hf > 0 ? 'up' : 'down'}" style="font-weight:700">${d.hf >= 0 ? '+' : ''}${d.hf.toFixed(1)}%</span>${d.hf > 30 ? '(롱 과열)' : d.hf < -10 ? '(숏 과열)' : '(과열 아님)'}`);
     R.push('비트코인 파생: ' + P.join(', ') + '.'); } }
   // 5. 원화와 김프
   { const L = window.LIVE, kp = L && L.tick && L.tick.bithumb && L.fx ? (L.tick.bithumb / L.fx - 1) * 100 : null, w = ok('KRW=X') ? D.q['KRW=X'] : null;
