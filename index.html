@@ -832,7 +832,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
         <div><dt>환불</dt><dd>배정받지 못한 증거금이 돌아오는 날. 그전까지 그 돈은 다른 데 못 씁니다.</dd></div>
       </dl></details>
       <div id="ipoUp"></div>
-      <p class="hint" style="margin-top:6px">종목을 누르면 추천 이유, 배정 물량, 증거금이 나옵니다. 등급 옆 점수(100점 만점)는 기관경쟁률·확약·상장일 유통금액이 비슷한 과거 종목의 시초가 성적으로 매기며, 마우스를 올리면 같은 점수대의 실제 성적이 나옵니다. 종목 이름 옆 ☆를 누르면 내 청약(★)으로 표시되어 등급과 상관없이 구글 캘린더에 등록됩니다. 추천은 2023.6.26 이후 상장한 종목(스팩 제외) 중 기관경쟁률·확약 구간이 같은 종목의 시초가 성적으로 정합니다. 패스=청약 안 함, 패스 권장=손실 확률이 높고 균등 1주 기대값도 수수료 빼면 2천원 안팎이라 안 함, 비례=여유자금으로 비례, 대출=마통까지 써서 비례. 돈은 마감일 김프로 정합니다: 여유자금은 김프 +1.5% 이상, 마통은 +0.5% 이상일 때만(아니면 김프 매수용으로 남겨 둠, 2023~2026 데이터 기준). 예전 균등 등급은 비례로 넣어도 95%가 이득이라 2026-11-01부터 비례로 합쳤습니다. 같은 종목은 한 사람이 한 증권사에서만 청약할 수 있습니다(중복청약 금지).</p>
+      <p class="hint" style="margin-top:6px">종목을 누르면 추천 이유, 배정 물량, 증거금이 나옵니다. 등급 옆 점수(100점 만점)는 기관경쟁률·확약·상장일 유통금액이 비슷한 과거 종목의 시초가 성적으로 매기며, 마우스를 올리면 같은 점수대의 실제 성적이 나옵니다. 종목 이름 옆 ☆를 누르면 내 청약(★)으로 표시되어 등급과 상관없이 구글 캘린더에 등록됩니다. 추천은 2023.6.26 이후 상장한 종목(스팩 제외) 중 기관경쟁률·확약 구간이 같은 종목의 시초가 성적으로 정합니다. 패스=청약 안 함, 패스 권장=손실 확률이 높고 균등 1주 기대값도 수수료 빼면 2천원 안팎이라 안 함, 비례=여유자금으로 비례, 대출=마통까지 써서 비례. 예전 균등 등급은 비례로 넣어도 95%가 이득이라 2026-11-01부터 비례로 합쳤습니다. 같은 종목은 한 사람이 한 증권사에서만 청약할 수 있습니다(중복청약 금지).</p>
       <p class="hint" style="margin-top:4px;font-size:13px">※ 등급은 과거 상장 결과를 통계로 정리한 참고 자료이며, 투자 권유나 수익 보장이 아닙니다. 청약과 매도 판단, 그에 따른 손익은 본인 책임입니다.</p>
     </section>
     <section class="card">
@@ -1756,6 +1756,16 @@ function chkState(c){   // 지금 단계와 점검 항목. '오늘' 탭도 같�
   return {stage, big, R, k, L, reg: P.reg};
 }
 window.chkStateNow = () => chkState(pfCalc());
+// 공모주 비례에 쓸 돈(주인 기기만): 김프 매수가 곧 올 수 있는 몫은 남기고 나머지. 텔레그램 알림과 같은 계산
+window.ipoMoneyTxt = () => {
+  const P = PLANP; if (!P || !P.plan || !P.L || !P.plan.ipoGap) return '';
+  const pl = P.plan, L = P.L, px = LIVE.tick.bithumb, fx = LIVE.fx; if (!px || !fx) return '';
+  const k = (px/fx-1)*100, c = pfCalc(), T0 = pl.t1*px/1e4, T1 = pl.t2*px/1e4;
+  const own = c.qty >= 1000 ? 0 : T0, loanF = c.qty >= pl.t1 + pl.t2 - 5000 ? 0 : T1;
+  const need = (own && k < L[0] + pl.ipoGap[0] ? own : 0) + (loanF && k < L[2] + pl.ipoGap[1] ? loanF : 0), free = Math.max(0, own + loanF - need);
+  const uo = Math.min(own ? pl.cash : 0, free), ul = free - uo, m = v => Math.round(v).toLocaleString('ko-KR') + '만';
+  return `지금 김프 ${k >= 0 ? '+' : ''}${k.toFixed(2)}% → 비례에 쓸 돈 <b>${free ? m(free) + '원' : '없음'}</b>${free ? ` (${[uo ? '여유자금 ' + m(uo) : '', ul ? '마통 ' + m(ul) : ''].filter(Boolean).join(' → 모자라면 ')})` : ''}${need ? ` · 김프 매수용으로 ${m(need)}원 남겨 두기` : ''}`;
+};
 const ICON = {ok:'✅', no:'❌', warn:'⚠️', info:'ℹ️'};
 window.chkLi = r => `<li class="${r.st}"><span class="i">${ICON[r.st]}</span><span>${r.t}</span>${r.d ? `<small>${r.d}</small>` : ''}</li>`;
 function renderChk(c){
@@ -2029,14 +2039,7 @@ const inB = (B, v) => B.find(([a, b]) => v >= a && v < b);
 const HINT = pool('2023', false);
 const LOAN_RATE = 0.05, IDLE_RATE = 0.025;   // 마통 연 5%, 여유자금 기회비용(예금 연 2.5%) — 마감일부터 환불일까지 날수만큼
 const REC = {x:['패스','rec-x'], e:['균등','rec-e'], c:['패스 권장','rec-c'], p:['비례','rec-p'], l:['대출','rec-l'], w:['결과 대기','rec-w']};
-// 마통을 공모주 대출 비례에 쓸지, 김프 −0.5% 매수용으로 비워 둘지: 빗썸 실시간 김프 기준 (2024.1~2026.10 1시간 데이터)
-function kimpGate(){
-  const L = window.LIVE, p = L && L.tick.bithumb, fx = L && L.fx; if (!p || !fx) return '';
-  const k = (p / fx - 1) * 100, s = `지금 빗썸 김프 <b>${k >= 0 ? '+' : ''}${k.toFixed(2)}%</b> → `;
-  return k >= 0.5 ? s + '<b class="up">마통 써도 됩니다.</b> 4일 안에 −0.5% 아래로 갈 확률 약 4%.'
-    : k >= 0 ? s + '<b>마통 써도 되지만 환불 2일 종목 위주로.</b> 4일 안에 −0.5% 아래로 갈 확률 약 27%(놓쳐도 7일 안에 다시 오는 경우 약 80%).'
-    : s + '<b class="down">마통은 김프 매수용으로 비워 두세요.</b> 며칠 안에 −0.5% 매수 신호가 올 확률 50% 이상.';
-}
+function kimpGate(){ return window.ipoMoneyTxt ? window.ipoMoneyTxt() : ''; }   // 김프 기준은 주인 기기만(중계 서버 규칙)
 setInterval(() => { const h = kimpGate(); document.querySelectorAll('.kg').forEach(e => { if (e.innerHTML !== h) e.innerHTML = h; }); }, 5000);
 function recKind(i, lk, sc){
   if (i < 100 || (lk < 1 && (i < 500 || i >= 1000)) || (i < 500 && lk < 5)) return 'x';
@@ -2137,8 +2140,8 @@ function itemHTML(u){
   const nOk = can.filter(x => x.ok).length;
   const bks = (u.alloc && u.alloc.length ? u.alloc : u.brokers.map(b => ({name:b}))).map(a =>
     `<span class="pill">${esc(a.name)}${a.shares ? ' ' + (a.shares/1e4).toFixed(a.shares<1e5?1:0) + '만주' : ''}${a.limit && a.limit !== '-' ? ' · 한도 ' + esc(a.limit) : ''}</span>`).join('');
-  // 등급별 할 일(2023-07~2026-10 데이터로 정한 김프 기준 포함). 패스는 카드를 흐리고 작게 보여 눈에 덜 띄게 한다
-  const ACT = {l: `👉 마감일 ${sd(u.sub[1])} 14~15시에 비례 <small>김프 +1.5% 이상 → 여유자금+마통 · +0.5% 이상 → 마통만 · 그 아래 → 균등 최소</small>`, p: `👉 여유자금으로 비례 <small>마감일 김프 +1.5% 이상일 때만 · 아니면 균등 최소</small>`,
+  // 등급별 할 일. 김프로 금액을 정하는 기준은 주인 기기에만(kimpGate). 패스는 카드를 흐리고 작게 보여 눈에 덜 띄게 한다
+  const ACT = {l: `👉 마감일 ${sd(u.sub[1])} 14~15시에 마통까지 써서 비례 <small class="kg">${kimpGate()}</small>`, p: `👉 마감일에 여유자금으로 비례 <small class="kg">${kimpGate()}</small>`,
     w: `⏳ 수요예측 결과가 나오면 등급을 매깁니다${u.fc ? ` <small>· ${md(u.fc[0])}~${md(u.fc[1])}</small>` : ''}`}[R.k] || '';
   const ph = phase(u), dl = ph === 'wait' ? `청약 ${sd(u.sub[0])}~${sd(u.sub[1])} · 상장 <b>${u.list ? sd(u.list) : '미정'}</b>` : `청약 <b>${sd(u.sub[0])}~${sd(u.sub[1])}</b> · 상장 ${u.list ? sd(u.list) : '미정'}`;
   return `<details class="ir g-${R.k}${ph === 'live' ? ' now' : ''}${mine ? ' my' : ''}" data-no="${u.no}"><summary>
@@ -2265,7 +2268,7 @@ const GSTAT = {};
 function recTip(k, i, lk){
   if (k === 'w' || i == null) return '수요예측 결과(기관경쟁률·확약)가 나오면 등급을 매깁니다.';
   if (!GSTAT[k]) { const G = HINT.filter(l => l.inst != null && recKind(l.inst, l.lock ?? 0, l.score) === k); GSTAT[k] = {post: gstat(G.filter(isPost)), pre: gstat(G.filter(l => !isPost(l)))}; }
-  const g = GSTAT[k], act = {l:'여유자금+마통으로 비례 (마감일 김프 +1.5% 이상이면 둘 다, +0.5% 이상이면 마통만)', p:'여유자금으로 비례', e:'균등 최소 수량', c:'패스 권장 (균등 1주 기대값이 수수료 빼면 2천원 안팎)', x:'청약 안 함'}[k];
+  const g = GSTAT[k], act = {l:'여유자금+마통으로 비례', p:'여유자금으로 비례', e:'균등 최소 수량', c:'패스 권장 (균등 1주 기대값이 수수료 빼면 2천원 안팎)', x:'청약 안 함'}[k];
   return `${REC[k][0]}: 기관 ${won(i)}:1 · 확약 ${(lk ?? 0).toFixed(1)}%\n기준: ${RULE_TXT[k]}\n같은 등급 ${gtxt(g.post, '개편 후')}\n같은 등급 ${gtxt(g.pre, '개편 전')}\n→ ${act}`;
 }
 function renderGrade(){
@@ -3621,7 +3624,7 @@ window.todayRender = function(){
     // 공모주: 오늘 일이 있는 종목과 7일 안 일정을 카드로(주관사·공모가·기관경쟁률·확약·최소 증거금·등급)
     if (A) {
       const U = A.upcoming.filter(u => !A.isSpac(u.name)), M = A.mine(), nm = u => esc(u.name.replace(/\s*\(.*?\)/g, ''));
-      const ACTX = {p: '비례 청약 (마감일 김프 보고 금액)', l: '마통까지 비례 청약', e: '균등 최소 청약', c: '패스 권장', x: '패스', w: '수요예측 결과 대기'};
+      const ACTX = {p: '비례 청약', l: '마통까지 비례 청약', e: '균등 최소 청약', c: '패스 권장', x: '패스', w: '수요예측 결과 대기'};
       const card = (u, ev, evc) => { const R = A.rec(u), [st] = A.status(u), mm = A.minM(u), mine = M.includes(u.no);
         return `<div class="tdi ${evc}"><div class="t1"><span class="ev">${ev}</span><b>${nm(u)}</b>${R ? `<span class="rec ${A.REC[R.k][1]}">${A.REC[R.k][0]}</span>` : ''}${u.score != null && A.scoreTag ? A.scoreTag(u.score, u) : ''}${mine ? '<span class="mine" title="내 청약">★</span>' : ''}</div>
           <div class="bks">${A.bkSort(u).map(A.bkIco).join(' ')}${own && A.whoDots ? A.whoDots(u) : ''}</div>
