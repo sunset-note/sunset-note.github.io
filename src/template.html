@@ -482,6 +482,17 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .mk-mood .pill{font-size:14.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--panel)}
 .mk-read{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
 .mk-read h3{margin:0 0 6px;font:800 15px var(--font);letter-spacing:-.02em}
+.mk-con{border-radius:12px;padding:10px 14px;margin:2px 0 10px;background:color-mix(in srgb,var(--ink) 6%,var(--panel));font-size:16.5px;line-height:1.6}
+.mk-con b.h{display:inline-block;font:800 13px var(--font);color:var(--panel);background:var(--ink);border-radius:6px;padding:1px 8px;margin-right:8px;vertical-align:1px}
+.mk-warn{border-radius:12px;padding:10px 14px;margin-top:10px;background:color-mix(in srgb,var(--ma) 13%,var(--panel));border:1px solid color-mix(in srgb,var(--ma) 35%,transparent)}
+.mk-warn b.h{font:800 14.5px var(--font)}
+.mk-warn ul{margin:4px 0 0;padding-left:18px;display:grid;gap:4px}
+.mk-warn li{font-size:15.5px;line-height:1.55}
+.mk-rl{display:grid;gap:8px}
+.mk-read .rd{display:grid;grid-template-columns:132px 1fr;gap:10px;align-items:start;padding:9px 12px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--panel));border-left:4px solid var(--c)}
+.mk-read .rd .lb{font:800 14px/1.7 var(--font);color:var(--c);white-space:nowrap}
+.mk-read .rd .tx{font-size:16px;line-height:1.7}
+@media (max-width:640px){.mk-read .rd{grid-template-columns:1fr;gap:2px}}
 .mk-read ol{margin:0;padding-left:20px;display:grid;gap:5px}
 .mk-read li{font-size:16px;line-height:1.7}
 .mk-read li b{font-weight:700}
@@ -3430,6 +3441,10 @@ function renderMood(){
     `<span class="pill">가장 크게 움직인 것: ${big.map(s => `<b>${esc(META[s][1])}</b>`).join(' · ')}</span>`;
   AUTO = big;
 }
+// 읽기 한 줄: 앞의 '라벨:'을 색 칩으로 바꿔 구역마다 눈에 띄게
+const RLB = {'미국 증시': ['🇺🇸', '#3f7fd0'], '미국 선물': ['⏱️', '#5a8fd8'], '코인': ['🪙', '#e08a1e'], '비트코인 파생': ['📊', '#c0662a'], '금리·안전자산': ['🏦', '#2e9d72'], '미국 섹터': ['🧩', '#7a5cc8'], '한국': ['🇰🇷', '#d0457e'], '관련 뉴스': ['📰', '#6b6370']};
+function rdRow(t){ const m = t.match(/^([^:<]{2,10}):\s*/), k = m && RLB[m[1]] ? m[1] : null, [ic, col] = k ? RLB[k] : ['•', '#6b6370'];
+  return `<div class="rd" style="--c:${col}"><span class="lb">${ic} ${k || ''}</span><span class="tx">${k ? t.slice(m[0].length) : t}</span></div>`; }
 // 오늘의 시장 읽기: 지표끼리 견줘서 규칙으로 몇 문장을 만든다(해석은 하되 전망·매매 권유는 하지 않음)
 function renderRead(){
   if (!D) return;
@@ -3442,7 +3457,7 @@ function renderRead(){
     else if (dw != null && Math.sign(dw) !== Math.sign(n) && Math.abs(n - dw) > 0.6) t += ` 다우는 ${dw >= 0 ? '오르고' : '내리고'} 나스닥은 ${n >= 0 ? '올라' : '내려'} <b>기술주와 전통 업종이 엇갈렸어요</b>.`;
     R.push(t); }
   // 2. 지금 미국 선물(장 밖 시간 분위기)
-  if (ok('NQ=F') && D.q['NQ=F'].t > Date.now() / 1000 - 3600 && Math.abs(z('NQ=F')) >= 0.5) R.push(`지금 나스닥 선물은 <b class="${c('NQ=F') >= 0 ? 'up' : 'down'}">${f(c('NQ=F'))}</b>로, 다음 미국 장도 ${c('NQ=F') >= 0 ? '오름세로' : '약세로'} 시작할 분위기예요.`);
+  if (ok('NQ=F') && D.q['NQ=F'].t > Date.now() / 1000 - 3600 && Math.abs(z('NQ=F')) >= 0.5) R.push(`미국 선물: 지금 나스닥 선물은 <b class="${c('NQ=F') >= 0 ? 'up' : 'down'}">${f(c('NQ=F'))}</b>로, 다음 미국 장도 ${c('NQ=F') >= 0 ? '오름세로' : '약세로'} 시작할 분위기예요.`);
   // 3. 코인: 비트 vs 나스닥, 알트 vs 비트
   if (ok('BTC-USD')) { const b = c('BTC-USD'), n = ok('NQ=F') ? c('NQ=F') : ok('^IXIC') ? c('^IXIC') : null, alts = ['ETH-USD','SOL-USD','XRP-USD'].filter(ok), ab = alts.length ? alts.reduce((a, s) => a + c(s), 0) / alts.length : null;
     let t = `코인: 비트코인 24시간 <b class="${b >= 0 ? 'up' : 'down'}">${f(b)}</b>`;
@@ -3475,7 +3490,25 @@ function renderRead(){
   // 6. 가장 크게 움직인 자산의 첫 뉴스 제목(왜 움직였나에서 받아 둔 것)
   { const top = AUTO.filter(s => NEWS[META[s][3]] && NEWS[META[s][3]].items.length).slice(0, 2);
     if (top.length) R.push('관련 뉴스: ' + top.map(s => { const it = NEWS[META[s][3]].items[0]; return `${esc(META[s][1])} — <a href="${esc(it.u)}" target="_blank" rel="noopener">“${esc(dent(it.t))}”</a>`; }).join(' · ')); }
-  $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3><ol>${R.map(t => `<li>${t}</li>`).join('')}</ol><p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
+  // 주의: 변동성·쏠림·과열 신호가 기준을 넘을 때만
+  const W = [], vx = D.q['^VIX'], fg = D.fng && D.fng[0], dB = D.dv && D.dv.BTC, kst = new Date(Date.now() + 9 * 3600e3), wkd = kst.getUTCDay() === 0 || kst.getUTCDay() === 6;
+  if (vx && vx.p >= 25) W.push(`공포지수 VIX ${vx.p.toFixed(1)}: 25를 넘으면 하루 변동이 평소보다 커지는 구간이에요.`);
+  else if (vx && c('^VIX') >= 10) W.push(`VIX가 하루에 ${f(c('^VIX'))} 뛰었어요. 불안이 빠르게 커지는 중이에요.`);
+  if (fg && fg.v <= 20) W.push(`코인 공포·탐욕 ${fg.v}(극단적 공포): 투매가 나오는 구간이라 하루 폭이 커요. 하락 중에 서둘러 판단하지 않기.`);
+  if (fg && fg.v >= 80) W.push(`코인 공포·탐욕 ${fg.v}(극단적 탐욕): 과열 구간이에요. 추격 매수 주의.`);
+  if (dB && dB.hf > 30) W.push(`BTC 펀딩비 연 ${dB.hf.toFixed(0)}%: 롱이 많이 쌓여 있어서 급락하면 강제 청산이 연쇄로 나올 수 있어요.`);
+  if (dB && dB.hf < -10) W.push(`BTC 펀딩비 연 ${dB.hf.toFixed(0)}%: 숏이 몰려 있어서 반등하면 급등(숏 청산)이 나올 수 있어요.`);
+  if (dB && dB.top && dB.all) { const lp = r => r / (1 + r) * 100; if (lp(dB.all) - lp(dB.top) >= 5 && lp(dB.all) >= 70) W.push(`일반 계정 롱 ${lp(dB.all).toFixed(0)}% > 고수 ${lp(dB.top).toFixed(0)}%: 개인이 더 롱에 쏠려 있어요. 더 빠지면 개인 청산 물량이 나올 수 있어요.`); }
+  { const L2 = window.LIVE, kp = L2 && L2.tick && L2.tick.bithumb && L2.fx ? (L2.tick.bithumb / L2.fx - 1) * 100 : null;
+    if (kp != null && kp >= 2.5) W.push(`김프 ${f(kp)}: 국내에서 코인을 사면 해외보다 그만큼 비싸게 사는 거예요.`); }
+  if (ok('KRW=X') && Math.abs(z('KRW=X')) >= 1.5) W.push(`원/달러가 평소의 ${Math.abs(z('KRW=X')).toFixed(1)}배 움직였어요(${f(c('KRW=X'))}). 미국주식 원화 손익과 김프 계산이 크게 흔들려요.`);
+  if (wkd) W.push('주말이라 주식·선물 장이 닫혀 있고 코인만 움직여요. 월요일 장이 열릴 때 그 사이 움직임이 한꺼번에 반영될 수 있어요.');
+  // 결론: 분위기 + 주도 자산 + 주의 개수
+  const rk = [['NQ=F'], ['BTC-USD'], ['^KS11'], ['^SOX']].map(x => x[0]).filter(ok), upN = rk.filter(s => c(s) > 0).length;
+  const mood = !rk.length ? '' : upN === rk.length ? '위험자산이 같이 오르는 날' : upN === 0 ? '위험자산이 같이 빠지는 날' : '자산마다 방향이 엇갈리는 날';
+  const lead = AUTO.slice(0, 2).map(s => META[s][1]).join('·');
+  const con = mood ? `${mood}이에요${lead ? ` (가장 크게 움직인 것: ${esc(lead)})` : ''}. ${W.length >= 3 ? '불안 신호가 여러 개 겹쳐 있어서 <b>변동성이 큰 구간</b>이에요. 새로 들어가기보다 정해 둔 규칙대로만 움직이는 게 좋은 날이에요.' : W.length ? '주의할 신호가 있어요. 아래 주의를 확인하세요.' : '눈에 띄는 과열·공포 신호는 없어요.'}` : '';
+  $('mkRead').innerHTML = R.length ? `<h3>오늘의 시장 읽기</h3>${con ? `<div class="mk-con"><b class="h">결론</b>${con}</div>` : ''}<div class="mk-rl">${R.map(rdRow).join('')}</div>${W.length ? `<div class="mk-warn"><b class="h">⚠️ 주의</b><ul>${W.map(t => `<li>${t}</li>`).join('')}</ul></div>` : ''}<p class="hint" style="margin-top:6px">지표끼리 견줘 규칙으로 만든 설명이에요. 이유는 "왜 움직였나" 뉴스로 확인하세요.</p>` : '';
 }
 // 기간 차트(야후 차트 중계)
 const RNG = [['1d','1일','5m'],['5d','1주','30m'],['1mo','1달','1d'],['6mo','6달','1d'],['1y','1년','1d'],['5y','5년','1wk'],['max','전체','1mo']];
