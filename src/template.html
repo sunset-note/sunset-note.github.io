@@ -3355,7 +3355,8 @@ function renderMood(){
 const NEWS = {};
 async function news(q){ if (NEWS[q] && Date.now() - NEWS[q].at < 6e5) return NEWS[q].items;
   try { const j = await fetch(`${PROXY}/news?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : null); const it = (j && j.items) || []; NEWS[q] = {at: Date.now(), items: it}; return it; } catch(e) { return []; } }
-const nl = (L, n) => L.length ? `<ul class="mk-nl">${L.slice(0, n).map(x => `<li><a href="${esc(x.u)}" target="_blank" rel="noopener">${esc(x.t)}</a><small>${esc(x.s)}${x.at ? ' · ' + ago(x.at) : ''}</small></li>`).join('')}</ul>` : '<p class="hint">관련 뉴스를 찾지 못했어요.</p>';
+const dent = t => String(t).replace(/&#(\d+);/g, (m, n) => String.fromCharCode(+n)).replace(/&#x([0-9a-f]+);/gi, (m, n) => String.fromCharCode(parseInt(n, 16)));
+const nl = (L, n) => L.length ? `<ul class="mk-nl">${L.slice(0, n).map(x => `<li><a href="${esc(x.u)}" target="_blank" rel="noopener">${esc(dent(x.t))}</a><small>${esc(dent(x.s))}${x.at ? ' · ' + ago(x.at) : ''}</small></li>`).join('')}</ul>` : '<p class="hint">관련 뉴스를 찾지 못했어요.</p>';
 async function renderWhy(){
   const L = SEL ? [SEL] : AUTO; if (!L.length) return;
   $('mkWhyT').textContent = SEL ? `${META[SEL][1]} 뉴스` : '왜 움직였나 · 가장 크게 움직인 3개';
