@@ -3436,6 +3436,7 @@ function renderMap(){
 }
 // 시차 처리: 코인은 24시간 내내, 주식은 장이 닫히면 마지막 거래일 값이라 둘을 바로 견주지 않는다
 const TZ = s => /^(\^KS11|\^KQ11|\^N225|\^HSI|000001\.SS)$/.test(s) ? 'Asia/Seoul' : s === '^STOXX50E' ? 'Europe/Berlin' : 'America/New_York';
+const fgc = v => v <= 45 ? 'down' : v >= 55 ? 'up' : '';   // 공포는 파랑, 탐욕은 빨강(하락·상승 색과 같은 규칙)
 const fresh = s => { const q = D && D.q[s]; return !!q && (/-USD$/.test(s) || Date.now() / 1000 - q.t < 3 * 3600); };
 const dayOf = s => { const q = D && D.q[s]; return q ? new Date(q.t * 1000).toLocaleDateString('ko-KR', {weekday: 'short', timeZone: TZ(s)}) : ''; };
 const basis = s => fresh(s) ? '' : `${dayOf(s)}요일 마감`;
@@ -3449,7 +3450,7 @@ function renderMood(){
   const big = Object.keys(META).filter(s => D.q[s]).sort((a, b) => Math.abs(sc(b)) - Math.abs(sc(a))).slice(0, 3);
   const f = D.fng && D.fng[0], KO = {'Extreme Fear': '극단적 공포', 'Fear': '공포', 'Neutral': '중립', 'Greed': '탐욕', 'Extreme Greed': '극단적 탐욕'};
   $('mkMood').innerHTML = `<span class="line">${line}</span>` + all.map(([s, n]) => `<span class="pill">${n} <b class="${c(s) > 0 ? 'up' : 'down'}">${(c(s) >= 0 ? '+' : '') + c(s).toFixed(2)}%</b>${fresh(s) ? '' : ` <small class="hint">${basis(s)}</small>`}</span>`).join('') +
-    (f ? `<span class="pill">코인 공포·탐욕 <b>${f.v}</b> ${KO[f.c] || f.c}${D.fng[1] ? ` (어제 ${D.fng[1].v})` : ''}</span>` : '') +
+    (f ? `<span class="pill">코인 공포·탐욕 <b class="${fgc(f.v)}">${f.v} ${KO[f.c] || f.c}</b>${D.fng[1] ? ` (어제 ${D.fng[1].v})` : ''}</span>` : '') +
     `<span class="pill">가장 크게 움직인 것: ${big.map(s => { const v = c(s); return `<b class="${v > 0 ? 'up' : v < 0 ? 'down' : ''}">${esc(META[s][1])} ${(v >= 0 ? '+' : '') + v.toFixed(2)}%</b>`; }).join(' · ')}</span>`;
   AUTO = big;
 }
@@ -3484,7 +3485,7 @@ function renderRead(){
     if (n != null) t += Math.sign(b) === Math.sign(n) ? (Math.abs(b) > Math.abs(n) * 2 ? `, 주식과 같은 방향이지만 폭이 ${Math.abs(b / (n || 1e-9)).toFixed(1)}배라 <b>위험자산 흐름에 코인이 더 크게 반응</b>했어요` : `, 주식과 같은 방향이에요`) : `, 주식과 반대로 움직여 <b>코인만의 재료</b>가 있는 날이에요`;
     if (n == null && ok('^IXIC')) t += `. 주식 장이 닫혀 있어(${basis('^IXIC')}) 코인과 직접 비교하지 않았어요`;
     if (ab != null && Math.abs(ab) > Math.abs(b) * 1.3 && Math.sign(ab) === Math.sign(b)) t += `. 알트코인 평균 ${f(ab)}로 비트보다 ${b < 0 ? '더 빠졌어요' : '더 올랐어요'}`;
-    const fg = D.fng && D.fng[0]; if (fg) t += `. 공포·탐욕 지수 <b>${fg.v}</b>${D.fng[1] ? `(어제 ${D.fng[1].v})` : ''}`;
+    const fg = D.fng && D.fng[0]; if (fg) t += `. 공포·탐욕 지수 <b class="${fgc(fg.v)}">${fg.v}</b>${D.fng[1] ? `(어제 ${D.fng[1].v})` : ''}`;
     R.push(t + '.'); }
   // 4. 안전자산·금리·변동성
   { const P = []; if (ok('^VIX') && Math.abs(c('^VIX')) >= 3) P.push(`공포지수 VIX ${f(c('^VIX'))}(${D.q['^VIX'].p.toFixed(1)}${D.q['^VIX'].p >= 20 ? ', 20 넘어 불안 구간' : ''})`);
