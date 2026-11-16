@@ -39,7 +39,7 @@ for u in D["upcoming"]:
     lkey = "L%d" % u["no"]
     if u.get("list") and u["list"] >= today and lkey not in st["done"]:
         res.append(dict(no=lkey, summary="[상장] %s 시초가 매도 (%s)" % (u["name"] + (" ★" if mine else ""), "/".join(u["brokers"])),
-                        startTime=u["list"] + "T08:30:00", endTime=u["list"] + "T09:00:00", colorId=COLOR, reminders=[0], graded=k in NAME, ipo=u["no"],
+                        startTime=u["list"] + "T08:30:00", endTime=u["list"] + "T09:00:00", colorId=COLOR, reminders=[90], graded=k in NAME, ipo=u["no"],
                         description="상장일: 9시 시초가에 매도 (%s 등급%s)\n공모가 %s · 기관경쟁률 %s:1 · 확약 %.2f%%\n동시호가(08:30~09:00)에 시장가 매도 주문을 걸어 두면 시초가로 팔립니다.\n\nhttps://sunset-note.github.io/#ipo" % (
                             grade, ", 내 청약" if mine else "", "{:,}원".format(int(u["price"])) if u.get("price") else "?", "{:,.0f}".format(u["inst"] or 0), u.get("lock") or 0)))
     if u["sub"][1] < today or str(u["no"]) in st["done"]:
