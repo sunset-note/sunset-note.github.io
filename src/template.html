@@ -579,7 +579,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <span class="tk time" id="tkTime">연결 중…</span>
 </div></div>
 
-<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#today" data-tab="today">오늘</a><a href="#market" data-tab="market">시장</a><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>거래소 예치</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
+<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#today" data-tab="today">오늘</a><a href="#market" data-tab="market">시장</a><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>예치·LP</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
 <div class="wrap" id="syncPanel" hidden style="padding-block:12px 0">
   <section class="card">
     <div class="head"><h2>기기 연동 (컴퓨터 ↔ 폰)</h2><p class="hint" id="syncState"></p></div>
@@ -996,7 +996,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 
 <div class="wrap" id="tab-earn" hidden>
   <section class="card earn-card">
-    <div class="head"><h2>거래소 예치</h2><p class="hint" id="earnAt"></p></div>
+    <div class="head"><h2>예치·LP</h2><p class="hint" id="earnAt"></p></div>
     <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button><button type="button" data-v="lp" aria-pressed="false">RWA LP 관찰</button></div>
     <div class="earn-ctl">
       <label class="field earn-amt" id="earnAmtBox"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
