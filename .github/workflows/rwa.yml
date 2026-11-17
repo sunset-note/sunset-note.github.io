@@ -1,0 +1,33 @@
+# RWA 주식토큰 LP 관찰(돈 안 넣는 모의 운용): 매일 KST 07:05에 지난 3.5일 체인 기록으로 계산해 rwa.json에 날짜별로 쌓는다
+name: rwa
+on:
+  schedule:
+    - cron: '5 22 * * *'   # UTC 22:05 = KST 07:05 (미국장 회수 끝난 06:30 뒤)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 다시 계산할 기간(일, 최대 약 11)
+        default: '3.5'
+permissions:
+  contents: write
+concurrency:
+  group: rwa
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 src/rwa.py "${{ github.event.inputs.days || '3.5' }}"
+      - name: commit
+        run: |
+          git config user.name "sunset-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rwa.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -q -m "RWA LP 관찰 $(TZ=Asia/Seoul date '+%m-%d')"
+          for i in 1 2 3; do git pull -q --rebase && git push -q && exit 0; sleep 20; done; exit 1

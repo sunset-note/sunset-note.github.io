@@ -77,7 +77,21 @@ th{font-size:13.5px;font-weight:600;color:var(--muted);position:sticky;top:0;bac
 td{font-family:var(--mono);font-size:14.5px}
 th:first-child,td:first-child{text-align:left}
 .earn-card{padding:16px 18px 14px}
-.earn-tabs{max-width:360px;margin:2px 0 14px}
+.earn-tabs{max-width:520px;margin:2px 0 14px}
+.earn-tabs button{white-space:nowrap}
+.lpo .lpo-top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:12px}
+.lpo .lpo-top .seg{flex-wrap:wrap}
+.lpo .lpo-top .seg button{white-space:nowrap;padding:6px 10px;flex:0 0 auto}
+.lpo .sum{font-size:15px;line-height:1.6;margin:0 0 12px;padding:12px 14px;border-radius:12px;background:var(--soft)}
+.lpo .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.lpo table td:first-child,.lpo table th:first-child{text-align:left;font-family:var(--font)}
+.lpo tbody tr{cursor:pointer}
+.lpo tbody tr.sel td{background:var(--soft)}
+.lpo .vd{font:600 12.5px var(--font);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.lpo .vd.ok{background:color-mix(in srgb,var(--up) 14%,transparent);color:var(--up)}
+.lpo .vd.no{background:color-mix(in srgb,var(--down) 14%,transparent);color:var(--down)}
+.lpo .vd.uc{background:var(--soft);color:var(--muted)}
+.lpo h3{font-size:15px;margin:18px 0 8px}
 .earn-tabs button{font-size:15px;padding:8px 4px}
 .earn-ctl{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
 .earn-amt{width:150px}
@@ -983,7 +997,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 <div class="wrap" id="tab-earn" hidden>
   <section class="card earn-card">
     <div class="head"><h2>거래소 예치</h2><p class="hint" id="earnAt"></p></div>
-    <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button></div>
+    <div class="seg earn-tabs" id="earnTabs"><button type="button" data-v="prod" aria-pressed="true">예치 상품</button><button type="button" data-v="pool" aria-pressed="false">런치풀</button><button type="button" data-v="lp" aria-pressed="false">RWA LP 관찰</button></div>
     <div class="earn-ctl">
       <label class="field earn-amt" id="earnAmtBox"><span>예치 금액 (달러)</span><input type="number" id="earnAmt" min="1" step="1000" inputmode="numeric"></label>
       <div class="field"><span>코인</span><div class="seg" id="earnCoin"><button type="button" data-v="USDT" aria-pressed="false">USDT</button><button type="button" data-v="USDC" aria-pressed="false">USDC</button><button type="button" data-v="" aria-pressed="true">전체</button></div></div>
@@ -995,6 +1009,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div id="evList" class="ev-list" hidden></div>
     <p class="hint earn-note" id="earnNote"></p>
     <p class="hint earn-note" id="evNote" hidden></p>
+    <div id="lpBox" class="lpo" hidden></div>
   </section>
 </div>
 
@@ -3800,7 +3815,66 @@ function setView(v){
   $('evList').hidden = $('evNote').hidden = prod;
   $('evOpts').hidden = v !== 'pool';
   $('earnCoin').parentElement.hidden = v === 'pool';
+  const lpv = v === 'lp';
+  $('lpBox').hidden = !lpv;
+  document.querySelector('#tab-earn .earn-ctl').hidden = lpv;
+  if (lpv) { if (lpAt == null) lpAt = $('earnAt').textContent; $('evList').hidden = $('evNote').hidden = true; lpLoad(); return; }
+  if (lpAt != null) { $('earnAt').textContent = lpAt; lpAt = null; }
   renderEv();
+}
+// ---- RWA LP 관찰: GitHub가 매일 아침 만드는 rwa.json(돈 안 넣는 모의 운용, 풀당 $3,000) ----
+let LPD = null, lpPool = '', lpSel = null, lpAt = null;
+async function lpLoad(){
+  if (!LPD) {
+    $('lpBox').innerHTML = '<p class="hint">불러오는 중…</p>';
+    try { const r = await fetch('rwa.json?t=' + Math.floor(Date.now() / 6e5)); LPD = r.ok ? await r.json() : null; } catch (e) { LPD = null; }
+    if (!LPD) { $('lpBox').innerHTML = '<p class="hint">관찰 자료를 아직 받지 못했습니다.</p>'; return; }
+  }
+  lpRender();
+}
+function lpRender(){
+  const D = LPD, cfg = D.cfg, days = Object.keys(D.days).sort(), pools = D.pools;
+  const ps = lpPool ? [lpPool] : pools;
+  // 날짜별 풀 평균: [보상, LP 손익, 비용, 리밸, 범위 안(분), 운용(분)]
+  const per = cfg.map((c, i) => days.map(d => { const R = ps.map(p => D.days[d].r[p] && D.days[d].r[p][i]).filter(Boolean);
+    if (!R.length) return null; const m = j => R.reduce((a, r) => a + r[j], 0) / R.length; return [m(0), m(1), m(2), m(3), m(4), m(5)]; }));
+  const st = cfg.map((c, i) => { const X = per[i].filter(x => x && x[5] >= 60), n = X.length;
+    if (!n) return null; const net = X.map(x => x[0] + x[1] - x[2]), mean = net.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(net.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, n - 1)), se = sd / Math.sqrt(n);
+    const sum = j => X.reduce((a, x) => a + x[j], 0);
+    return {i, n, mean, se, neg: net.filter(v => v < 0).length, apr: sum(0) / 3000 / (sum(5) / 525600), reb: sum(3) / n, inr: sum(4) / Math.max(1, sum(5)),
+      v: n >= 5 && mean - 2 * se > 0 ? 'ok' : n >= 5 && mean + 2 * se < 0 ? 'no' : 'uc'}; }).filter(Boolean);
+  if (!st.length) { $('lpBox').innerHTML = '<p class="hint">아직 쌓인 날이 없습니다.</p>'; return; }
+  const n = Math.max(...st.map(x => x.n));
+  if (lpSel == null || !st.find(x => x.i === lpSel)) lpSel = (st.find(x => cfg[x.i][0] === 6 && cfg[x.i][1] === 5) || st[0]).i;
+  const sg = v => (v >= 0 ? '+' : '−') + '$' + Math.abs(v).toFixed(2), cl = v => v > 0 ? 'up' : v < 0 ? 'down' : '';
+  const VD = {ok: '플러스 확실', no: '마이너스 확실', uc: '불확실'};
+  const best = st.slice().sort((a, b) => (b.mean - 2 * b.se) - (a.mean - 2 * a.se))[0];
+  const okN = st.filter(x => x.v === 'ok').length;
+  const nm = i => `${cfg[i][0]}칸 · ${cfg[i][1]}분`;
+  const a0 = D.days[days[0]].aero, a1 = D.days[days[days.length - 1]].aero;
+  const aeroTxt = a0 && a1 ? ` 같은 기간 AERO는 ${a0[0].toFixed(3)} → ${a1[1].toFixed(3)}달러(${((a1[1] / a0[0] - 1) * 100).toFixed(0)}%).` : '';
+  const at = new Date(D.at * 1000);
+  $('earnAt').textContent = `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')} 기준`;
+  const sumTxt = n < 20 ? `관찰 <b>${n}일</b>째예요. 20일이 쌓이기 전까지는 표본이 짧아 참고만 하세요.` : `관찰 <b>${n}일</b>.`;
+  let h = `<div class="lpo-top"><div class="seg" id="lpPools"><button type="button" data-p="" aria-pressed="${!lpPool}">6개 평균</button>${pools.map(p => `<button type="button" data-p="${p}" aria-pressed="${lpPool === p}">${p}</button>`).join('')}</div></div>`;
+  h += `<p class="sum">${sumTxt} 설정 ${st.length}개 중 “플러스 확실”(평균에서 오차 2배를 빼도 플러스)은 <b>${okN}개</b>. 오차를 빼고도 가장 나은 건 <b>${nm(best.i)}</b>(하루 ${sg(best.mean)} ± ${best.se.toFixed(2)})${cfg[best.i][0] <= 2 ? ' — 다만 1~2칸은 체결 지연·MEV가 빠져 실제보다 크게 좋게 나오는 구간이에요' : ''}.${aeroTxt}</p>`;
+  h += `<div class="tw"><table><thead><tr><th>설정 (구간 · 대기)</th><th>순손익/일</th><th>±오차</th><th>하루 수익률</th><th>손실 날</th><th>보상 APR</th><th>리밸/일</th><th>범위 안</th><th>판정</th></tr></thead><tbody>`;
+  for (const x of st) h += `<tr data-i="${x.i}" class="${x.i === lpSel ? 'sel' : ''}"><td>${nm(x.i)}</td><td class="${cl(x.mean)}">${sg(x.mean)}</td><td>${x.se.toFixed(2)}</td><td class="${cl(x.mean)}">${(Math.abs(x.mean / 30) < 0.005 ? 0 : x.mean / 30).toFixed(2)}%</td><td>${x.neg}/${x.n}</td><td>${Math.round(x.apr * 100).toLocaleString()}%</td><td>${x.reb.toFixed(1)}</td><td>${Math.round(x.inr * 100)}%</td><td><span class="vd ${x.v}">${VD[x.v]}</span></td></tr>`;
+  h += '</tbody></table></div>';
+  // 고른 설정의 날짜별
+  const sel = per[lpSel];
+  h += `<h3>${nm(lpSel)} · 날짜별 (${lpPool || '6개 평균'})</h3><div class="tw"><table><thead><tr><th>날짜</th><th>순손익</th><th>보상</th><th>LP 손익</th><th>비용</th><th>리밸</th><th>운용</th><th>주가</th></tr></thead><tbody>`;
+  let cum = 0;
+  const rows = days.map((d, j) => { const x = sel[j]; if (!x || x[5] < 60) return '';
+    const net = x[0] + x[1] - x[2]; cum += net;
+    const px = ps.map(p => D.days[d].px && D.days[d].px[p]).filter(Boolean), chg = px.length ? px.reduce((a, q) => a + (q[1] / q[0] - 1), 0) / px.length * 100 : null;
+    return `<tr><td>${d.slice(5).replace('-', '/')}</td><td class="${cl(net)}">${sg(net)}</td><td>${sg(x[0])}</td><td class="${cl(x[1])}">${sg(x[1])}</td><td>−$${x[2].toFixed(2)}</td><td>${x[3].toFixed(0)}</td><td>${(x[5] / 60).toFixed(1)}h</td><td class="${cl(chg)}">${chg == null ? '–' : (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%'}</td></tr>`; }).reverse().join('');
+  h += rows + `</tbody></table></div><p class="hint" style="margin-top:6px">누적 ${sg(cum)} (풀 하나 $3,000 기준) · 표의 줄을 누르면 그 설정의 날짜별로 바뀝니다.</p>`;
+  h += `<p class="hint earn-note">돈을 넣지 않는 모의 운용이에요. Base의 Aerodrome 주식토큰/USDC 풀 6개에 풀마다 $3,000을 넣었다고 치고, 체인 원본 가격(스왑 기록)과 풀의 보상 누적값으로 매일 아침 계산합니다. 규칙: 현재가 중심 N칸(1칸 = 0.1%), 범위 밖에 M분 연속 있으면 다시 배치, 평일 미국장(한국 21:55~06:30, 서머타임 땐 한 시간 앞) 동안 전부 회수, 주말은 계속 운용. 비용은 스왑 수수료와 가스($0.02)만 넣었습니다. <b>체결 지연·MEV가 빠져 있어서 좁은 구간(1~2칸)일수록 실제보다 좋게 나옵니다.</b> 보상은 그 시각 AERO 가격에 바로 판다고 계산했고, LP 손익에는 주가 등락이 들어 있습니다. 하루 수익률은 $3,000 대비입니다.</p>`;
+  $('lpBox').innerHTML = h;
+  $('lpPools').onclick = e => { const b = e.target.closest('button'); if (b) { lpPool = b.dataset.p; lpRender(); } };
+  $('lpBox').querySelector('tbody').onclick = e => { const r = e.target.closest('tr'); if (r) { lpSel = +r.dataset.i; lpRender(); } };
 }
 function header(){
   const now = Date.now() / 1000, ats = Object.values(DATA).map(v => v.at);
