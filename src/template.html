@@ -3823,7 +3823,8 @@ function setView(v){
   renderEv();
 }
 // ---- RWA LP 관찰: GitHub가 매일 아침 만드는 rwa.json(돈 안 넣는 모의 운용, 풀당 $3,000) ----
-let LPD = null, lpPool = '', lpSel = null, lpAt = null;
+let LPD = null, lpPool = '', lpSel = null, lpAt = null, lpSlip = 0.03;   // 리밸 1회당 추가 손실(체결 지연·MEV, 원금 대비 %)
+const lpCost = x => x[2] + lpSlip / 100 * 3000 * x[3];
 async function lpLoad(){
   if (!LPD) {
     $('lpBox').innerHTML = '<p class="hint">불러오는 중…</p>';
@@ -3839,7 +3840,7 @@ function lpRender(){
   const per = cfg.map((c, i) => days.map(d => { const R = ps.map(p => D.days[d].r[p] && D.days[d].r[p][i]).filter(Boolean);
     if (!R.length) return null; const m = j => R.reduce((a, r) => a + r[j], 0) / R.length; return [m(0), m(1), m(2), m(3), m(4), m(5)]; }));
   const st = cfg.map((c, i) => { const X = per[i].filter(x => x && x[5] >= 60), n = X.length;
-    if (!n) return null; const net = X.map(x => x[0] + x[1] - x[2]), mean = net.reduce((a, b) => a + b, 0) / n;
+    if (!n) return null; const net = X.map(x => x[0] + x[1] - lpCost(x)), mean = net.reduce((a, b) => a + b, 0) / n;
     const sd = Math.sqrt(net.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, n - 1)), se = sd / Math.sqrt(n);
     const sum = j => X.reduce((a, x) => a + x[j], 0);
     return {i, n, mean, se, neg: net.filter(v => v < 0).length, apr: sum(0) / 3000 / (sum(5) / 525600), reb: sum(3) / n, inr: sum(4) / Math.max(1, sum(5)),
@@ -3857,8 +3858,8 @@ function lpRender(){
   const at = new Date(D.at * 1000);
   $('earnAt').textContent = `${at.getMonth() + 1}/${at.getDate()} ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')} 기준`;
   const sumTxt = n < 20 ? `관찰 <b>${n}일</b>째예요. 20일이 쌓이기 전까지는 표본이 짧아 참고만 하세요.` : `관찰 <b>${n}일</b>.`;
-  let h = `<div class="lpo-top"><div class="seg" id="lpPools"><button type="button" data-p="" aria-pressed="${!lpPool}">6개 평균</button>${pools.map(p => `<button type="button" data-p="${p}" aria-pressed="${lpPool === p}">${p}</button>`).join('')}</div></div>`;
-  h += `<p class="sum">${sumTxt} 설정 ${st.length}개 중 “플러스 확실”(평균에서 오차 2배를 빼도 플러스)은 <b>${okN}개</b>. 오차를 빼고도 가장 나은 건 <b>${nm(best.i)}</b>(하루 ${sg(best.mean)} ± ${best.se.toFixed(2)})${cfg[best.i][0] <= 2 ? ' — 다만 1~2칸은 체결 지연·MEV가 빠져 실제보다 크게 좋게 나오는 구간이에요' : ''}.${aeroTxt}</p>`;
+  let h = `<div class="lpo-top"><div class="seg" id="lpPools"><button type="button" data-p="" aria-pressed="${!lpPool}">6개 평균</button>${pools.map(p => `<button type="button" data-p="${p}" aria-pressed="${lpPool === p}">${p}</button>`).join('')}</div><div class="field"><span>리밸 1회당 추가 손실 (체결 지연·MEV)</span><div class="seg" id="lpSlipSeg">${[0, 0.01, 0.03, 0.05].map(v => `<button type="button" data-s="${v}" aria-pressed="${lpSlip === v}">${v ? v + '%' : '없음'}</button>`).join('')}</div></div></div>`;
+  h += `<p class="sum">${sumTxt} 설정 ${st.length}개 중 “플러스 확실”(평균에서 오차 2배를 빼도 플러스)은 <b>${okN}개</b>. 오차를 빼고도 가장 나은 건 <b>${nm(best.i)}</b>(하루 ${sg(best.mean)} ± ${best.se.toFixed(2)})${cfg[best.i][0] <= 2 && !lpSlip ? ' — 다만 추가 손실 ‘없음’이라 1~2칸이 실제보다 크게 좋게 나와요' : ''} · 리밸 1회당 추가 손실 ${lpSlip ? lpSlip + '%' : '없음'} 기준.${aeroTxt}</p>`;
   h += `<div class="tw"><table><thead><tr><th>설정 (구간 · 대기)</th><th>순손익/일</th><th>±오차</th><th>하루 수익률</th><th>손실 날</th><th>보상 APR</th><th>리밸/일</th><th>범위 안</th><th>판정</th></tr></thead><tbody>`;
   for (const x of st) h += `<tr data-i="${x.i}" class="${x.i === lpSel ? 'sel' : ''}"><td>${nm(x.i)}</td><td class="${cl(x.mean)}">${sg(x.mean)}</td><td>${x.se.toFixed(2)}</td><td class="${cl(x.mean)}">${(Math.abs(x.mean / 30) < 0.005 ? 0 : x.mean / 30).toFixed(2)}%</td><td>${x.neg}/${x.n}</td><td>${Math.round(x.apr * 100).toLocaleString()}%</td><td>${x.reb.toFixed(1)}</td><td>${Math.round(x.inr * 100)}%</td><td><span class="vd ${x.v}">${VD[x.v]}</span></td></tr>`;
   h += '</tbody></table></div>';
@@ -3867,12 +3868,13 @@ function lpRender(){
   h += `<h3>${nm(lpSel)} · 날짜별 (${lpPool || '6개 평균'})</h3><div class="tw"><table><thead><tr><th>날짜</th><th>순손익</th><th>보상</th><th>LP 손익</th><th>비용</th><th>리밸</th><th>운용</th><th>주가</th></tr></thead><tbody>`;
   let cum = 0;
   const rows = days.map((d, j) => { const x = sel[j]; if (!x || x[5] < 60) return '';
-    const net = x[0] + x[1] - x[2]; cum += net;
+    const net = x[0] + x[1] - lpCost(x); cum += net;
     const px = ps.map(p => D.days[d].px && D.days[d].px[p]).filter(Boolean), chg = px.length ? px.reduce((a, q) => a + (q[1] / q[0] - 1), 0) / px.length * 100 : null;
-    return `<tr><td>${d.slice(5).replace('-', '/')}</td><td class="${cl(net)}">${sg(net)}</td><td>${sg(x[0])}</td><td class="${cl(x[1])}">${sg(x[1])}</td><td>−$${x[2].toFixed(2)}</td><td>${x[3].toFixed(0)}</td><td>${(x[5] / 60).toFixed(1)}h</td><td class="${cl(chg)}">${chg == null ? '–' : (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%'}</td></tr>`; }).reverse().join('');
+    return `<tr><td>${d.slice(5).replace('-', '/')}</td><td class="${cl(net)}">${sg(net)}</td><td>${sg(x[0])}</td><td class="${cl(x[1])}">${sg(x[1])}</td><td>−$${lpCost(x).toFixed(2)}</td><td>${x[3].toFixed(0)}</td><td>${(x[5] / 60).toFixed(1)}h</td><td class="${cl(chg)}">${chg == null ? '–' : (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%'}</td></tr>`; }).reverse().join('');
   h += rows + `</tbody></table></div><p class="hint" style="margin-top:6px">누적 ${sg(cum)} (풀 하나 $3,000 기준) · 표의 줄을 누르면 그 설정의 날짜별로 바뀝니다.</p>`;
-  h += `<p class="hint earn-note">돈을 넣지 않는 모의 운용이에요. Base의 Aerodrome 주식토큰/USDC 풀 6개에 풀마다 $3,000을 넣었다고 치고, 체인 원본 가격(스왑 기록)과 풀의 보상 누적값으로 매일 아침 계산합니다. 규칙: 현재가 중심 N칸(1칸 = 0.1%), 범위 밖에 M분 연속 있으면 다시 배치, 평일 미국장(한국 21:55~06:30, 서머타임 땐 한 시간 앞) 동안 전부 회수, 주말은 계속 운용. 비용은 스왑 수수료와 가스($0.02)만 넣었습니다. <b>체결 지연·MEV가 빠져 있어서 좁은 구간(1~2칸)일수록 실제보다 좋게 나옵니다.</b> 보상은 그 시각 AERO 가격에 바로 판다고 계산했고, LP 손익에는 주가 등락이 들어 있습니다. 하루 수익률은 $3,000 대비입니다.</p>`;
+  h += `<p class="hint earn-note">돈을 넣지 않는 모의 운용이에요. Base의 Aerodrome 주식토큰/USDC 풀 6개에 풀마다 $3,000을 넣었다고 치고, 체인 원본 가격(스왑 기록)과 풀의 보상 누적값으로 매일 아침 계산합니다. 규칙: 현재가 중심 N칸(1칸 = 0.1%), 범위 밖에 M분 연속 있으면 다시 배치, 평일 미국장(한국 21:55~06:30, 서머타임 땐 한 시간 앞) 동안 전부 회수, 주말은 계속 운용. 비용은 스왑 수수료와 가스($0.02)에, 위에서 고른 “리밸 1회당 추가 손실”(원금 $3,000 대비, 기본 0.03% = $0.9)을 리밸 횟수만큼 더했습니다. 실제 값은 아직 모르고, <b>‘없음’으로 두면 좁은 구간(1~2칸)일수록 실제보다 좋게 나옵니다.</b> 보상은 그 시각 AERO 가격에 바로 판다고 계산했고, LP 손익에는 주가 등락이 들어 있습니다. 하루 수익률은 $3,000 대비입니다.</p>`;
   $('lpBox').innerHTML = h;
+  $('lpSlipSeg').onclick = e => { const b = e.target.closest('button'); if (b) { lpSlip = +b.dataset.s; lpRender(); } };
   $('lpPools').onclick = e => { const b = e.target.closest('button'); if (b) { lpPool = b.dataset.p; lpRender(); } };
   $('lpBox').querySelector('tbody').onclick = e => { const r = e.target.closest('tr'); if (r) { lpSel = +r.dataset.i; lpRender(); } };
 }
