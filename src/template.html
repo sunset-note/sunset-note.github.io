@@ -567,6 +567,15 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .howto dl{margin:4px 0 6px;display:grid;gap:8px}
 .howto dt{font-weight:700}
 .howto dd{margin:2px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+.gp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.gp-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel)}
+.gp-main{margin-top:10px;text-align:center}
+.gp-main.hit{background:color-mix(in srgb,var(--ma) 16%,var(--panel));border-color:var(--ma)}
+.gp-v{font-size:24px;font-weight:700}
+.gp-big{font-size:36px}
+.gp-v.up{color:var(--up)}.gp-v.dn{color:var(--down)}
+.gp-log{width:100%;margin-top:12px}
+.gp-log td,.gp-log th{text-align:right}.gp-log td:first-child,.gp-log th:first-child{text-align:left}
 </style>
 
 <div class="ticker"><div class="in">
@@ -579,7 +588,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <span class="tk time" id="tkTime">연결 중…</span>
 </div></div>
 
-<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#today" data-tab="today">오늘</a><a href="#market" data-tab="market">시장</a><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>예치·LP</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
+<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#today" data-tab="today">오늘</a><a href="#market" data-tab="market">시장</a><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>예치·LP</a><a href="#gap" data-tab="gap" id="gapLink" hidden>현선 갭</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
 <div class="wrap" id="syncPanel" hidden style="padding-block:12px 0">
   <section class="card">
     <div class="head"><h2>기기 연동 (컴퓨터 ↔ 폰)</h2><p class="hint" id="syncState"></p></div>
@@ -1010,6 +1019,19 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <p class="hint earn-note" id="earnNote"></p>
     <p class="hint earn-note" id="evNote" hidden></p>
     <div id="lpBox" class="lpo" hidden></div>
+  </section>
+</div>
+
+<div class="wrap" id="tab-gap" hidden>
+  <section class="card gp-card">
+    <div class="head"><h2>현선 갭 · 앤트로픽</h2><p class="hint" id="gpAt"></p></div>
+    <div class="gp-grid">
+      <div class="gp-box"><div class="hint">하이퍼리퀴드 xyz:ANT</div><div class="gp-v" id="gpHl">–</div><div class="hint" id="gpHlS">&nbsp;</div></div>
+      <div class="gp-box"><div class="hint">나스닥 ANT</div><div class="gp-v" id="gpNq">–</div><div class="hint" id="gpNqS">&nbsp;</div></div>
+    </div>
+    <div class="gp-box gp-main" id="gpCard"><div class="hint">가격차 (선물 ÷ 주식 − 1)</div><div class="gp-v gp-big" id="gpGap">–</div><div id="gpMsg">불러오는 중</div></div>
+    <table class="gp-log"><thead><tr><th>시각</th><th>선물</th><th>주식</th><th>가격차</th></tr></thead><tbody id="gpLog"></tbody></table>
+    <p class="hint" style="margin-top:10px">이 탭을 열어 둔 동안 5초마다 갱신해요. 선물은 하이퍼리퀴드 표시가격, 주식은 야후 나스닥 마지막 체결가예요(몇 초 늦을 수 있어요). 국내 증권사에서는 미국 주식 공매도가 안 돼서, 선물이 2% 넘게 비쌀 때만(주식 매수 + 선물 매도) 노란색으로 표시하고, 0.3% 안으로 붙으면 정리할 때라고 알려줘요. 호가 차이와 수수료(왕복 약 0.5~1%)는 빠져 있어요. 스페이스X 상장 때는 장 마감 시점 가격차가 매일 0.3% 이내로 붙었어요.</p>
   </section>
 </div>
 
@@ -3941,5 +3963,52 @@ $('earnTabs').addEventListener('click', e => { const b = e.target.closest('butto
 $('earnLink').addEventListener('click', load);
 if (!$('tab-earn').hidden) load();
 window.addEventListener('hashchange', () => { if (location.hash === '#earn') { setAmt(); render(); load(); } });
+})();
+</script>
+<script>
+// ---- 현선 갭: 하이퍼리퀴드 xyz:ANT 선물과 나스닥 ANT 주식 가격차. 내 기기에만 보이고, 탭을 열어 둔 동안만 5초마다 받는다
+(function(){
+const $ = id => document.getElementById(id);
+const own = window.isOwnDevice && window.isOwnDevice();
+if (!own) { if (!$('tab-gap').hidden) location.hash = 'kimp'; return; }
+$('gapLink').hidden = false;
+const W = 'https://sunset-fx.ghlckd01.workers.dev', f2 = v => v.toFixed(2), kst = t => new Date(t).toLocaleTimeString('ko-KR', {hour12: false, timeZone: 'Asia/Seoul'});
+let timer = null, last = 0;
+async function hl(){
+  const r = await fetch('https://api.hyperliquid.xyz/info', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({type: 'metaAndAssetCtxs', dex: 'xyz'})});
+  const [m, c] = await r.json(), x = c[m.universe.findIndex(u => u.name === 'xyz:ANT')];
+  return {mark: +x.markPx, fund: +x.funding};
+}
+async function nq(){
+  const p = Math.floor(Date.now() / 5000) * 5;   // 5초마다 다른 주소라 워커 캐시(30초)를 거치지 않는다
+  const j = await (await fetch(`${W}/chart/ANT?interval=1m&period1=${p - 6 * 3600}&period2=${p + 60}`)).json(), r = j.chart.result[0], m = r.meta;
+  const v = (r.indicators.quote[0].volume || []).filter(Boolean).length;
+  return {px: +m.regularMarketPrice, t: m.regularMarketTime * 1000, traded: v > 0 && m.regularMarketPrice !== 83};
+}
+async function tick(){
+  let a, b;
+  try { a = await hl(); } catch(e) { $('gpMsg').textContent = '하이퍼리퀴드 불러오기 실패'; }
+  try { b = await nq(); } catch(e) { $('gpMsg').textContent = '나스닥 시세 불러오기 실패'; }
+  $('gpAt').textContent = kst(Date.now()) + ' 기준';
+  if (a) { $('gpHl').textContent = f2(a.mark); $('gpHlS').textContent = '펀딩 시간당 ' + (a.fund * 100).toFixed(4) + '%'; }
+  if (b) { $('gpNq').textContent = f2(b.px); $('gpNqS').textContent = b.traded ? '체결 ' + kst(b.t) : '첫 거래 전 (공모가 83)'; }
+  if (!a || !b) return;
+  if (!b.traded) { $('gpGap').textContent = '–'; $('gpGap').className = 'gp-v gp-big'; $('gpMsg').textContent = '나스닥 첫 거래를 기다리는 중'; $('gpCard').classList.remove('hit'); return; }
+  const g = (a.mark / b.px - 1) * 100, hit = g >= 2, cls = g > 0 ? 'up' : 'dn', s = (g > 0 ? '+' : '') + g.toFixed(2) + '%';
+  $('gpGap').textContent = s; $('gpGap').className = 'gp-v gp-big ' + cls;
+  $('gpCard').classList.toggle('hit', hit);
+  $('gpMsg').textContent = hit ? '선물이 2% 넘게 비싸요 (주식 매수 + 선물 매도 조건)' : Math.abs(g) <= 0.3 ? '거의 붙었어요 (0.3% 이내, 정리할 때)' : g < 0 ? '선물이 더 싸요 (국내에서는 공매도가 안 돼서 할 수 없는 방향)' : '가격차 2% 미만';
+  if (Date.now() - last >= 30000) { last = Date.now();
+    const tr = document.createElement('tr'); tr.innerHTML = `<td>${kst(Date.now())}</td><td>${f2(a.mark)}</td><td>${f2(b.px)}</td><td style="color:var(--${g > 0 ? 'up' : 'down'})">${s}</td>`;
+    const L = $('gpLog'); L.prepend(tr); while (L.children.length > 40) L.lastChild.remove(); }
+}
+function sync(){
+  const on = !$('tab-gap').hidden && !document.hidden;
+  if (on && !timer) { tick(); timer = setInterval(tick, 5000); }
+  if (!on && timer) { clearInterval(timer); timer = null; }
+}
+window.addEventListener('hashchange', () => setTimeout(sync, 0));
+document.addEventListener('visibilitychange', sync);
+sync();
 })();
 </script>
