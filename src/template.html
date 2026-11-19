@@ -3983,7 +3983,13 @@ async function nq(){
   const p = Math.floor(Date.now() / 5000) * 5;   // 5초마다 다른 주소라 워커 캐시(30초)를 거치지 않는다
   const j = await (await fetch(`${W}/chart/ANT?interval=1m&period1=${p - 6 * 3600}&period2=${p + 60}`)).json(), r = j.chart.result[0], m = r.meta;
   const v = (r.indicators.quote[0].volume || []).filter(Boolean).length;
-  return {px: +m.regularMarketPrice, t: m.regularMarketTime * 1000, traded: v > 0 && m.regularMarketPrice !== 83};
+  const o = {px: +m.regularMarketPrice, t: m.regularMarketTime * 1000, traded: v > 0 && m.regularMarketPrice !== 83};
+  if (!o.traded) try {   // 첫 거래 전: 나스닥 동시호가 매수·매도 호가의 가운데 값을 쓴다
+    const d = (await (await fetch(`${W}/nq/ANT`)).json()).data.primaryData, n = x => +String(x || '').replace(/[$,]/g, '');
+    const bid = n(d.bidPrice), ask = n(d.askPrice);
+    if (bid > 0 && ask > 0) Object.assign(o, {px: (bid + ask) / 2, bid, ask, book: true});
+  } catch(e) {}
+  return o;
 }
 async function tick(){
   let a, b;
@@ -3991,13 +3997,13 @@ async function tick(){
   try { b = await nq(); } catch(e) { $('gpMsg').textContent = '나스닥 시세 불러오기 실패'; }
   $('gpAt').textContent = kst(Date.now()) + ' 기준';
   if (a) { $('gpHl').textContent = f2(a.mark); $('gpHlS').textContent = '펀딩 시간당 ' + (a.fund * 100).toFixed(4) + '%'; }
-  if (b) { $('gpNq').textContent = f2(b.px); $('gpNqS').textContent = b.traded ? '체결 ' + kst(b.t) : '첫 거래 전 (공모가 83)'; }
+  if (b) { $('gpNq').textContent = f2(b.px); $('gpNqS').textContent = b.traded ? '체결 ' + kst(b.t) : b.book ? `첫 거래 전 동시호가 (매수 ${f2(b.bid)} · 매도 ${f2(b.ask)})` : '첫 거래 전 (공모가 83)'; }
   if (!a || !b) return;
-  if (!b.traded) { $('gpGap').textContent = '–'; $('gpGap').className = 'gp-v gp-big'; $('gpMsg').textContent = '나스닥 첫 거래를 기다리는 중'; $('gpCard').classList.remove('hit'); return; }
+  if (!b.traded && !b.book) { $('gpGap').textContent = '–'; $('gpGap').className = 'gp-v gp-big'; $('gpMsg').textContent = '나스닥 첫 거래를 기다리는 중'; $('gpCard').classList.remove('hit'); return; }
   const g = (a.mark / b.px - 1) * 100, hit = g >= 2, cls = g > 0 ? 'up' : 'dn', s = (g > 0 ? '+' : '') + g.toFixed(2) + '%';
   $('gpGap').textContent = s; $('gpGap').className = 'gp-v gp-big ' + cls;
   $('gpCard').classList.toggle('hit', hit);
-  $('gpMsg').textContent = hit ? '선물이 2% 넘게 비싸요 (주식 매수 + 선물 매도 조건)' : Math.abs(g) <= 0.3 ? '거의 붙었어요 (0.3% 이내, 정리할 때)' : g < 0 ? '선물이 더 싸요 (국내에서는 공매도가 안 돼서 할 수 없는 방향)' : '가격차 2% 미만';
+  $('gpMsg').textContent = (b.book ? '동시호가 기준 (아직 체결 전이라 실제 첫 체결가와 다를 수 있어요) · ' : '') + (hit ? '선물이 2% 넘게 비싸요 (주식 매수 + 선물 매도 조건)' : Math.abs(g) <= 0.3 ? '거의 붙었어요 (0.3% 이내, 정리할 때)' : g < 0 ? '선물이 더 싸요 (국내에서는 공매도가 안 돼서 할 수 없는 방향)' : '가격차 2% 미만');
   if (Date.now() - last >= 30000) { last = Date.now();
     const tr = document.createElement('tr'); tr.innerHTML = `<td>${kst(Date.now())}</td><td>${f2(a.mark)}</td><td>${f2(b.px)}</td><td style="color:var(--${g > 0 ? 'up' : 'down'})">${s}</td>`;
     const L = $('gpLog'); L.prepend(tr); while (L.children.length > 40) L.lastChild.remove(); }
