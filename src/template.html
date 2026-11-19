@@ -567,7 +567,9 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .howto dl{margin:4px 0 6px;display:grid;gap:8px}
 .howto dt{font-weight:700}
 .howto dd{margin:2px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
-.gp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.gp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.gp-grid .gp-v{font-size:20px}
+.gp-sub{margin-top:6px;font-size:14px}
 .gp-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel)}
 .gp-main{margin-top:10px;text-align:center}
 .gp-main.hit{background:color-mix(in srgb,var(--ma) 16%,var(--panel));border-color:var(--ma)}
@@ -1027,10 +1029,11 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="head"><h2>현선 갭 · 앤트로픽</h2><p class="hint" id="gpAt"></p></div>
     <div class="gp-grid">
       <div class="gp-box"><div class="hint">하이퍼리퀴드 xyz:ANT</div><div class="gp-v" id="gpHl">–</div><div class="hint" id="gpHlS">&nbsp;</div></div>
+      <div class="gp-box"><div class="hint">바이낸스 ANTUSDT</div><div class="gp-v" id="gpBn">–</div><div class="hint" id="gpBnS">&nbsp;</div></div>
       <div class="gp-box"><div class="hint">나스닥 ANT</div><div class="gp-v" id="gpNq">–</div><div class="hint" id="gpNqS">&nbsp;</div></div>
     </div>
-    <div class="gp-box gp-main" id="gpCard"><div class="hint">가격차 (선물 ÷ 주식 − 1)</div><div class="gp-v gp-big" id="gpGap">–</div><div id="gpMsg">불러오는 중</div></div>
-    <table class="gp-log"><thead><tr><th>시각</th><th>선물</th><th>주식</th><th>가격차</th></tr></thead><tbody id="gpLog"></tbody></table>
+    <div class="gp-box gp-main" id="gpCard"><div class="hint">가격차 (하이퍼리퀴드 선물 ÷ 주식 − 1)</div><div class="gp-v gp-big" id="gpGap">–</div><div id="gpMsg">불러오는 중</div><div class="gp-sub" id="gpSub"></div></div>
+    <table class="gp-log"><thead><tr><th>시각</th><th>하이퍼</th><th>바이낸스</th><th>주식</th><th>하이퍼 차</th><th>바낸 차</th></tr></thead><tbody id="gpLog"></tbody></table>
     <p class="hint" style="margin-top:10px">이 탭을 열어 둔 동안 5초마다 갱신해요. 선물은 하이퍼리퀴드 표시가격, 주식은 야후 나스닥 마지막 체결가예요(몇 초 늦을 수 있어요). 국내 증권사에서는 미국 주식 공매도가 안 돼서, 선물이 2% 넘게 비쌀 때만(주식 매수 + 선물 매도) 노란색으로 표시하고, 0.3% 안으로 붙으면 정리할 때라고 알려줘요. 호가 차이와 수수료(왕복 약 0.5~1%)는 빠져 있어요. 스페이스X 상장 때는 장 마감 시점 가격차가 매일 0.3% 이내로 붙었어요.</p>
   </section>
 </div>
@@ -3979,6 +3982,10 @@ async function hl(){
   const [m, c] = await r.json(), x = c[m.universe.findIndex(u => u.name === 'xyz:ANT')];
   return {mark: +x.markPx, fund: +x.funding};
 }
+async function bn(){
+  const x = await (await fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=ANTUSDT')).json();
+  return {mark: +x.markPrice, fund: +x.lastFundingRate};
+}
 async function nq(){
   const p = Math.floor(Date.now() / 5000) * 5;   // 5초마다 다른 주소라 워커 캐시(30초)를 거치지 않는다
   const j = await (await fetch(`${W}/chart/ANT?interval=1m&period1=${p - 6 * 3600}&period2=${p + 60}`)).json(), r = j.chart.result[0], m = r.meta;
@@ -3992,20 +3999,25 @@ async function nq(){
   return o;
 }
 async function tick(){
-  let a, b;
+  let a, b, c;
+  try { c = await bn(); $('gpBn').textContent = f2(c.mark); $('gpBnS').textContent = '펀딩 8시간당 ' + (c.fund * 100).toFixed(4) + '%'; } catch(e) { $('gpBnS').textContent = '불러오기 실패'; }
   try { a = await hl(); } catch(e) { $('gpMsg').textContent = '하이퍼리퀴드 불러오기 실패'; }
   try { b = await nq(); } catch(e) { $('gpMsg').textContent = '나스닥 시세 불러오기 실패'; }
   $('gpAt').textContent = kst(Date.now()) + ' 기준';
   if (a) { $('gpHl').textContent = f2(a.mark); $('gpHlS').textContent = '펀딩 시간당 ' + (a.fund * 100).toFixed(4) + '%'; }
   if (b) { $('gpNq').textContent = f2(b.px); $('gpNqS').textContent = b.traded ? '체결 ' + kst(b.t) : b.book ? `첫 거래 전 동시호가 (매수 ${f2(b.bid)} · 매도 ${f2(b.ask)})` : '첫 거래 전 (공모가 83)'; }
+  const pc = v => (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+  if (a && c) $('gpSub').textContent = '바이낸스 − 하이퍼리퀴드: ' + pc((c.mark / a.mark - 1) * 100);
   if (!a || !b) return;
   if (!b.traded && !b.book) { $('gpGap').textContent = '–'; $('gpGap').className = 'gp-v gp-big'; $('gpMsg').textContent = '나스닥 첫 거래를 기다리는 중'; $('gpCard').classList.remove('hit'); return; }
   const g = (a.mark / b.px - 1) * 100, hit = g >= 2, cls = g > 0 ? 'up' : 'dn', s = (g > 0 ? '+' : '') + g.toFixed(2) + '%';
+  const gb = c ? (c.mark / b.px - 1) * 100 : null;
   $('gpGap').textContent = s; $('gpGap').className = 'gp-v gp-big ' + cls;
-  $('gpCard').classList.toggle('hit', hit);
+  if (gb != null) $('gpSub').textContent = '바이낸스 선물 ÷ 주식: ' + pc(gb) + ' · 바이낸스 − 하이퍼리퀴드: ' + pc((c.mark / a.mark - 1) * 100) + (gb >= 2 && !hit ? ' (바이낸스 쪽은 2% 넘음)' : '');
+  $('gpCard').classList.toggle('hit', hit || gb >= 2);
   $('gpMsg').textContent = (b.book ? '동시호가 기준 (아직 체결 전이라 실제 첫 체결가와 다를 수 있어요) · ' : '') + (hit ? '선물이 2% 넘게 비싸요 (주식 매수 + 선물 매도 조건)' : Math.abs(g) <= 0.3 ? '거의 붙었어요 (0.3% 이내, 정리할 때)' : g < 0 ? '선물이 더 싸요 (국내에서는 공매도가 안 돼서 할 수 없는 방향)' : '가격차 2% 미만');
   if (Date.now() - last >= 30000) { last = Date.now();
-    const tr = document.createElement('tr'); tr.innerHTML = `<td>${kst(Date.now())}</td><td>${f2(a.mark)}</td><td>${f2(b.px)}</td><td style="color:var(--${g > 0 ? 'up' : 'down'})">${s}</td>`;
+    const tr = document.createElement('tr'); tr.innerHTML = `<td>${kst(Date.now())}</td><td>${f2(a.mark)}</td><td>${c ? f2(c.mark) : '–'}</td><td>${f2(b.px)}</td><td style="color:var(--${g > 0 ? 'up' : 'down'})">${s}</td><td style="color:var(--${gb > 0 ? 'up' : 'down'})">${gb != null ? pc(gb) : '–'}</td>`;
     const L = $('gpLog'); L.prepend(tr); while (L.children.length > 40) L.lastChild.remove(); }
 }
 function sync(){
