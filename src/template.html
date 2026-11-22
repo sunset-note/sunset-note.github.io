@@ -567,6 +567,33 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .howto dl{margin:4px 0 6px;display:grid;gap:8px}
 .howto dt{font-weight:700}
 .howto dd{margin:2px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+.cp-ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.cp-seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.cp-seg button{border:0;background:transparent;color:var(--muted);font:600 14px var(--font);padding:6px 12px;border-radius:7px;cursor:pointer}
+.cp-seg button[aria-pressed=true]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.cp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px;align-items:start}
+@media (max-width:900px){.cp-grid{grid-template-columns:minmax(0,1fr)}}
+.cp-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cp-h h2{margin:0} .cp-h .tot{font:600 14px var(--mono);color:var(--muted)}
+.cp-map{position:relative;width:100%;height:380px;border-radius:12px;overflow:hidden;background:var(--line)}
+@media (max-width:600px){.cp-map{height:320px}}
+.cp-tile{all:unset;box-sizing:border-box;position:absolute;cursor:pointer;background:var(--bg-t);border:2px solid var(--panel);border-radius:8px;padding:7px 8px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;color:var(--ink);line-height:1.2}
+.cp-tile.sel{border-color:var(--ink)}
+.cp-tile .n{font-weight:800;font-size:var(--fs,15px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cp-tile .c{font:800 calc(var(--fs,15px) * .95) var(--mono);white-space:nowrap}
+.cp-tile .m{font:500 12px var(--mono);color:var(--muted);margin-top:2px}
+.cp-tile.xs .m{display:none} .cp-tile.xxs .c{display:none}
+.cp-rows{margin-top:12px;display:flex;flex-direction:column}
+.cp-r{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:22px minmax(0,1fr) 92px 74px 90px;gap:8px;align-items:center;padding:7px 4px;border-bottom:1px solid var(--line);font-size:14px}
+.cp-r:last-child{border-bottom:0}
+.cp-r.sel{background:var(--soft);border-radius:8px}
+.cp-r .rk{font:700 13px var(--mono);color:var(--muted);text-align:right}
+.cp-r .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-r .nm small{display:block;font:500 12px var(--mono);color:var(--muted)}
+.cp-r .pr{font:500 13.5px var(--mono);text-align:right}
+.cp-r .ch{font:800 14px var(--mono);text-align:right}
+.cp-r svg{width:100%;height:28px;display:block}
+@media (max-width:420px){.cp-r{grid-template-columns:20px minmax(0,1fr) 70px 64px}.cp-r svg{display:none}}
 </style>
 
 <div class="ticker"><div class="in">
@@ -579,7 +606,7 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
   <span class="tk time" id="tkTime">연결 중…</span>
 </div></div>
 
-<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#today" data-tab="today">오늘</a><a href="#market" data-tab="market">시장</a><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>예치·LP</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
+<nav class="tabs" id="tabs"><span class="brand"><img src="favicon.svg" alt="" width="22" height="22" style="vertical-align:-5px;margin-right:6px">sunset의 투자노트</span><a href="#today" data-tab="today">오늘</a><a href="#market" data-tab="market">시장</a><a href="#cap" data-tab="cap">시총 Top10</a><a href="#kimp" data-tab="kimp">테더 김프</a><a href="#ipo" data-tab="ipo">공모주</a><a href="#etf" data-tab="etf">미국 ETF</a><a href="#earn" data-tab="earn" id="earnLink" hidden>예치·LP</a><button type="button" class="sync-btn" id="syncBtn" aria-expanded="false"><span class="dot" id="syncDot"></span>기기 연동</button></nav>
 <div class="wrap" id="syncPanel" hidden style="padding-block:12px 0">
   <section class="card">
     <div class="head"><h2>기기 연동 (컴퓨터 ↔ 폰)</h2><p class="hint" id="syncState"></p></div>
@@ -608,6 +635,20 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
     <div class="chk-head"><h2 style="margin:0">오늘의 이슈</h2><span class="hint">구글 뉴스 · 최근 24시간</span></div>
     <div class="mk-news" id="mkNews"></div>
   </section>
+</div>
+
+<div class="wrap" id="tab-cap" hidden>
+  <section class="card">
+    <div class="cp-ctl">
+      <div><h2 style="margin:0">시가총액 Top 10</h2><p class="hint" id="cpTime" style="margin-top:4px">불러오는 중…</p></div>
+      <div class="cp-seg" id="cpPer" role="group" aria-label="기간"><button type="button" data-p="d" aria-pressed="true">오늘</button><button type="button" data-p="m1" aria-pressed="false">1개월</button><button type="button" data-p="m3" aria-pressed="false">3개월</button><button type="button" data-p="y1" aria-pressed="false">1년</button></div>
+    </div>
+  </section>
+  <div class="cp-grid">
+    <section class="card"><div class="cp-h"><h2>🇺🇸 미국</h2><span class="tot" id="cpTotUs"></span></div><div class="cp-map" id="cpMapUs"></div><div class="cp-rows" id="cpRowsUs"></div></section>
+    <section class="card"><div class="cp-h"><h2>🇰🇷 한국 (코스피)</h2><span class="tot" id="cpTotKr"></span></div><div class="cp-map" id="cpMapKr"></div><div class="cp-rows" id="cpRowsKr"></div></section>
+  </div>
+  <p class="hint" style="margin-top:12px">칸 크기 = 시가총액, 칸 색 = 고른 기간의 주가 등락(빨강 상승 · 파랑 하락, 진할수록 크게 움직임). 순위는 매시간 갱신(미국 companiesmarketcap · 한국 네이버 증권, 우선주 제외), 오늘 시세는 탭을 보는 동안 1분마다 갱신(야후 파이낸스, 미국은 장중 약 15분 지연). 시가총액은 순위를 받은 뒤 주가가 움직인 만큼 다시 맞춘 추정치예요.</p>
 </div>
 
 <div class="wrap" id="tab-kimp">
@@ -1923,6 +1964,7 @@ function show(name){
   if (name === 'kimp' && window.kimpRebuild) requestAnimationFrame(window.kimpRebuild);
   if (name === 'today' && window.todayRender) window.todayRender();
   if (name === 'market' && window.marketShow) window.marketShow();
+  if (name === 'cap' && window.capShow) requestAnimationFrame(window.capShow);
   if (name === 'etf' && window.etfShow) requestAnimationFrame(window.etfShow);
 }
 let first = location.hash.slice(1);
@@ -3702,6 +3744,87 @@ window.todayRender();
     else if (!el) tip.hidden = true;
   }, true);
   addEventListener('scroll', () => { tip.hidden = true; }, true);
+})();
+</script>
+<script>
+// ---- 시가총액 Top 10: mcap.json(매시간 GitHub가 만듦)으로 순위·1년 흐름을 그리고, 오늘 시세는 워커 야후 차트로 덮어쓴다 ----
+(function(){
+const $ = id => document.getElementById(id), PROXY = 'https://sunset-fx.ghlckd01.workers.dev';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// 기간: [이름, 거래일 수(뒤에서), 색이 가장 진해지는 등락 %]
+const PER = {d: ['오늘', 1, 4], m1: ['1개월', 21, 15], m3: ['3개월', 63, 30], y1: ['1년', 0, 60]};
+let C = null, P = 'd', SEL = {}, LIVE = {}, busy = false, timer = null, lastLive = 0;
+try { P = localStorage.getItem('cap-per') || 'd'; if (!PER[P]) P = 'd'; } catch(e){}
+const cur = x => (LIVE[x.s] && LIVE[x.s].p) || x.h[x.h.length - 1];
+function chg(x){
+  const p = cur(x), h = x.h;
+  if (P === 'd') { const L = LIVE[x.s]; const pc = L && L.pc ? L.pc : h[h.length - 2]; return pc ? p / pc - 1 : null; }
+  const n = PER[P][1], b = n ? h[Math.max(0, h.length - 1 - n)] : h[0];
+  return b ? p / b - 1 : null;
+}
+const capNow = x => x.cap * cur(x) / x.p;
+const fmtUsCap = v => v >= 1e12 ? (v / 1e12).toFixed(2) + '조 달러' : (v / 1e11).toFixed(1) + '천억 달러';
+const fmtKrCap = v => v >= 1e12 ? Math.round(v / 1e12).toLocaleString('ko-KR') + '조' : Math.round(v / 1e8).toLocaleString('ko-KR') + '억';
+const fmtP = (v, us) => us ? '$' + v.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : Math.round(v).toLocaleString('ko-KR') + '원';
+const pct = c => c == null ? '–' : (c >= 0 ? '+' : '') + (c * 100).toFixed(Math.abs(c) >= .1 ? 1 : 2) + '%';
+function tint(c){ if (c == null || !isFinite(c) || !c) return 'var(--soft)'; const a = Math.min(1, Math.abs(c * 100) / PER[P][2]), k = c > 0 ? 'var(--up)' : 'var(--down)'; return `color-mix(in srgb,${k} ${Math.round(10 + a * 50)}%,var(--panel))`; }
+// 정사각형에 가깝게 나누는 트리맵(squarified)
+function squarify(items, x, y, w, h){
+  const out = [], tot = items.reduce((a, b) => a + b.v, 0); if (!tot) return out;
+  let rest = items.map(o => ({...o, a: o.v / tot * w * h}));
+  const worst = (row, side) => { const s = row.reduce((a, b) => a + b.a, 0), mx = Math.max(...row.map(r => r.a)), mn = Math.min(...row.map(r => r.a)); return Math.max(side * side * mx / (s * s), s * s / (side * side * mn)); };
+  while (rest.length) {
+    const side = Math.min(w, h); let row = [rest[0]], i = 1;
+    while (i < rest.length && worst(row.concat(rest[i]), side) <= worst(row, side)) { row.push(rest[i]); i++; }
+    const s = row.reduce((a, b) => a + b.a, 0);
+    if (w >= h) { const cw = s / h; let cy = y; for (const r of row) { const rh = r.a / cw; out.push({...r, x, y: cy, w: cw, h: rh}); cy += rh; } x += cw; w -= cw; }
+    else { const ch = s / w; let cx = x; for (const r of row) { const rw = r.a / ch; out.push({...r, x: cx, y, w: rw, h: ch}); cx += rw; } y += ch; h -= ch; }
+    rest = rest.slice(i);
+  }
+  return out;
+}
+function spark(x){
+  const n = PER[P][1], h0 = x.h, h = (P === 'y1' ? h0 : h0.slice(-Math.max(n === 1 ? 21 : n, 2) - 1)).concat(LIVE[x.s] && LIVE[x.s].p ? [LIVE[x.s].p] : []);
+  if (h.length < 2) return ''; const mn = Math.min(...h), mx = Math.max(...h), r = mx - mn || 1, up = h[h.length - 1] >= h[0];
+  const pts = h.map((v, i) => `${(i / (h.length - 1) * 100).toFixed(1)},${(26 - (v - mn) / r * 24).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${up ? 'var(--up)' : 'var(--down)'}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+}
+function draw(k){
+  const L = C && C[k], us = k === 'us', map = $(us ? 'cpMapUs' : 'cpMapKr'), rows = $(us ? 'cpRowsUs' : 'cpRowsKr');
+  if (!L) { map.innerHTML = '<p class="hint" style="padding:16px">자료를 받지 못했어요.</p>'; rows.innerHTML = ''; return; }
+  const items = L.map(it => ({it, v: capNow(it), c: chg(it)})).sort((a, b) => b.v - a.v);
+  const tot = items.reduce((a, b) => a + b.v, 0);
+  $(us ? 'cpTotUs' : 'cpTotKr').textContent = '10개 합계 ' + (us ? fmtUsCap(tot) : fmtKrCap(tot));
+  const W = map.clientWidth || 600, H = map.clientHeight || 380;
+  map.innerHTML = squarify(items, 0, 0, W, H).map(t => { const m = Math.min(t.w, t.h), fs = Math.max(11, Math.min(26, Math.sqrt(t.w * t.h) / 7.5)), sz = m < 46 ? ' xxs' : m < 74 ? ' xs' : '';
+    return `<button type="button" class="cp-tile${sz}${SEL[k] === t.it.s ? ' sel' : ''}" data-k="${k}" data-s="${esc(t.it.s)}" style="left:${t.x.toFixed(1)}px;top:${t.y.toFixed(1)}px;width:${t.w.toFixed(1)}px;height:${t.h.toFixed(1)}px;--bg-t:${tint(t.c)};--fs:${fs.toFixed(0)}px" title="${esc(t.it.n)} · 시총 ${us ? fmtUsCap(t.v) : fmtKrCap(t.v)} (${(t.v / tot * 100).toFixed(1)}%) · ${PER[P][0]} ${pct(t.c)}"><span class="n">${esc(t.it.n)}</span><span class="c ${t.c > 0 ? 'up' : t.c < 0 ? 'down' : ''}">${pct(t.c)}</span><span class="m">${us ? fmtUsCap(t.v) : fmtKrCap(t.v)}</span></button>`; }).join('');
+  rows.innerHTML = items.map((t, i) => `<button type="button" class="cp-r${SEL[k] === t.it.s ? ' sel' : ''}" data-k="${k}" data-s="${esc(t.it.s)}"><span class="rk">${i + 1}</span><span class="nm">${esc(t.it.n)}<small>${us ? fmtUsCap(t.v) : fmtKrCap(t.v)} · ${(t.v / tot * 100).toFixed(1)}%</small></span><span class="pr">${fmtP(cur(t.it), us)}</span><span class="ch ${t.c > 0 ? 'up' : t.c < 0 ? 'down' : ''}">${pct(t.c)}</span>${spark(t.it)}</button>`).join('');
+}
+function render(){
+  document.querySelectorAll('#cpPer button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === P));
+  draw('us'); draw('kr');
+  if (C) { const kst = t => new Date(t * 1000 + 9 * 3600e3).toISOString().slice(5, 16).replace('-', '/').replace('T', ' ');
+    $('cpTime').textContent = `순위 ${kst(C.t)} 기준` + (lastLive ? ` · 시세 ${kst(lastLive / 1000).slice(6)} 갱신` : ''); }
+}
+async function live(){
+  if (!C || busy || document.hidden || $('tab-cap').hidden) return; busy = true;
+  const all = [...(C.us || []), ...(C.kr || [])];
+  let ok = 0;
+  await Promise.all(all.map(async x => { try { const m = (await fetch(`${PROXY}/chart/${encodeURIComponent(x.s)}?range=1d&interval=5m`).then(r => r.json())).chart.result[0].meta;
+    if (m.regularMarketPrice) { LIVE[x.s] = {p: m.regularMarketPrice, pc: m.chartPreviousClose}; ok++; } } catch(e){} }));
+  if (ok) lastLive = Date.now(); busy = false; render();
+}
+async function load(){
+  try { const r = await fetch('mcap.json?t=' + Math.floor(Date.now() / 6e5)); if (r.ok) C = await r.json(); } catch(e){}
+  if (!C) { $('cpTime').textContent = '자료를 받지 못했어요'; return; }
+  render(); live();
+}
+$('cpPer').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (!b) return; P = b.dataset.p; try { localStorage.setItem('cap-per', P); } catch(e){} render(); });
+$('tab-cap').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; const k = b.dataset.k; SEL[k] = SEL[k] === b.dataset.s ? null : b.dataset.s; draw(k); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (!$('tab-cap').hidden) render(); }, 150); });
+window.capShow = () => { if (C) { render(); live(); } else load(); if (!timer) timer = setInterval(live, 60000); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('tab-cap').hidden) live(); });
+if (!$('tab-cap').hidden) window.capShow();
 })();
 </script>
 <script>

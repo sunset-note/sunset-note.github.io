@@ -22,7 +22,7 @@ jobs:
         run: |
           git config user.name "sunset-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html cal.json src/ipo_track.json src/float_cache.json src/dart_fc.json eq.json src/eq_log.json src/open_log.json
+          git add index.html cal.json mcap.json src/ipo_track.json src/float_cache.json src/dart_fc.json eq.json src/eq_log.json src/open_log.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git commit -q -m "데이터 자동 갱신 $(TZ=Asia/Seoul date '+%m-%d %H:%M')"
           for i in 1 2 3; do git pull -q --rebase -X theirs && git push -q && exit 0; sleep 20; done; exit 1

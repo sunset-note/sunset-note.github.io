@@ -25,6 +25,8 @@ python3 -I -c "import sys;t=open(sys.argv[1]).read();d=open(sys.argv[2]).read();
 python3 -I "$S/cal.py" ipo.json > "$R/cal.json"
 # 새 수요예측 결과를 바로 반영해 예상 시초·균등을 다시 계산(DART 실적 수집 없이 모델만)
 DART_KEY= python3 -I "$S/dart_eq.py" || echo "예측 갱신 실패"
+# 시가총액 Top10(미국·한국). 실패하면 기존 mcap.json을 그대로 둔다
+python3 -I "$S/mcap.py" "$R/mcap.json" || echo "시총 수집 실패"
 # 거래소 예치 상품. 실패해도 페이지 빌드는 막지 않는다
 python3 -I "$S/earn.py" "$R/earn.json" || echo "예치 수집 실패"
 # update.yml의 커밋 단계에 함께 들어가도록 미리 올려 둔다
