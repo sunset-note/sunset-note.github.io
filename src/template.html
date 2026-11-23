@@ -594,6 +594,8 @@ input[type=text]{width:100%;font:600 15px var(--font);color:var(--ink);backgroun
 .cp-r .ch{font:800 14px var(--mono);text-align:right}
 .cp-r svg{width:100%;height:28px;display:block}
 @media (max-width:420px){.cp-r{grid-template-columns:20px minmax(0,1fr) 70px 64px}.cp-r svg{display:none}}
+.cp-x{font-weight:700;color:var(--accent,inherit);margin-right:4px}
+.cp-r .ch small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);white-space:nowrap}
 </style>
 
 <div class="ticker"><div class="in">
@@ -3755,10 +3757,11 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 const PER = {d: ['오늘', 1, 4], m1: ['1개월', 21, 15], m3: ['3개월', 63, 30], y1: ['1년', 0, 60]};
 let C = null, P = 'd', SEL = {}, LIVE = {}, busy = false, timer = null, lastLive = 0;
 try { P = localStorage.getItem('cap-per') || 'd'; if (!PER[P]) P = 'd'; } catch(e){}
-const cur = x => (LIVE[x.s] && LIVE[x.s].p) || x.h[x.h.length - 1];
+// 개장 전·후 시세(x)가 있으면 그 값을 지금 가격으로 쓴다. 오늘 등락은 마지막 정규장 종가(p) 대비
+const cur = x => { const L = LIVE[x.s]; return (L && (L.x || L.p)) || x.h[x.h.length - 1]; };
 function chg(x){
   const p = cur(x), h = x.h;
-  if (P === 'd') { const L = LIVE[x.s]; const pc = L && L.pc ? L.pc : h[h.length - 2]; return pc ? p / pc - 1 : null; }
+  if (P === 'd') { const L = LIVE[x.s]; if (L && L.x) return L.x / L.p - 1; const pc = L && L.pc ? L.pc : h[h.length - 2]; return pc ? p / pc - 1 : null; }
   const n = PER[P][1], b = n ? h[Math.max(0, h.length - 1 - n)] : h[0];
   return b ? p / b - 1 : null;
 }
@@ -3789,16 +3792,20 @@ function spark(x){
   const pts = h.map((v, i) => `${(i / (h.length - 1) * 100).toFixed(1)},${(26 - (v - mn) / r * 24).toFixed(1)}`).join(' ');
   return `<svg viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${up ? 'var(--up)' : 'var(--down)'}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
 }
+const XK = {pre: '개장 전', post: '장 마감 후'};
+// 오늘 보기에서 개장 전·후 시세를 쓰는 종목은 줄에 '개장 전'과 직전 정규장 등락을 작게 붙인다
+function ext(x){ const L = LIVE[x.s]; if (P !== 'd' || !L || !L.x) return ''; const r = L.pc ? L.p / L.pc - 1 : null; return `<small>${XK[L.k]}${r == null ? '' : ' · 정규 ' + pct(r)}</small>`; }
 function draw(k){
   const L = C && C[k], us = k === 'us', map = $(us ? 'cpMapUs' : 'cpMapKr'), rows = $(us ? 'cpRowsUs' : 'cpRowsKr');
   if (!L) { map.innerHTML = '<p class="hint" style="padding:16px">자료를 받지 못했어요.</p>'; rows.innerHTML = ''; return; }
   const items = L.map(it => ({it, v: capNow(it), c: chg(it)})).sort((a, b) => b.v - a.v);
   const tot = items.reduce((a, b) => a + b.v, 0);
-  $(us ? 'cpTotUs' : 'cpTotKr').textContent = '10개 합계 ' + (us ? fmtUsCap(tot) : fmtKrCap(tot));
+  const xk = P === 'd' && L.map(x => LIVE[x.s] && LIVE[x.s].x && LIVE[x.s].k).find(Boolean);
+  $(us ? 'cpTotUs' : 'cpTotKr').innerHTML = (xk ? `<b class="cp-x">${XK[xk]} 시세</b> ` : '') + '10개 합계 ' + (us ? fmtUsCap(tot) : fmtKrCap(tot));
   const W = map.clientWidth || 600, H = map.clientHeight || 380;
   map.innerHTML = squarify(items, 0, 0, W, H).map(t => { const m = Math.min(t.w, t.h), fs = Math.max(11, Math.min(26, Math.sqrt(t.w * t.h) / 7.5)), sz = m < 46 ? ' xxs' : m < 74 ? ' xs' : '';
     return `<button type="button" class="cp-tile${sz}${SEL[k] === t.it.s ? ' sel' : ''}" data-k="${k}" data-s="${esc(t.it.s)}" style="left:${t.x.toFixed(1)}px;top:${t.y.toFixed(1)}px;width:${t.w.toFixed(1)}px;height:${t.h.toFixed(1)}px;--bg-t:${tint(t.c)};--fs:${fs.toFixed(0)}px" title="${esc(t.it.n)} · 시총 ${us ? fmtUsCap(t.v) : fmtKrCap(t.v)} (${(t.v / tot * 100).toFixed(1)}%) · ${PER[P][0]} ${pct(t.c)}"><span class="n">${esc(t.it.n)}</span><span class="c ${t.c > 0 ? 'up' : t.c < 0 ? 'down' : ''}">${pct(t.c)}</span><span class="m">${us ? fmtUsCap(t.v) : fmtKrCap(t.v)}</span></button>`; }).join('');
-  rows.innerHTML = items.map((t, i) => `<button type="button" class="cp-r${SEL[k] === t.it.s ? ' sel' : ''}" data-k="${k}" data-s="${esc(t.it.s)}"><span class="rk">${i + 1}</span><span class="nm">${esc(t.it.n)}<small>${us ? fmtUsCap(t.v) : fmtKrCap(t.v)} · ${(t.v / tot * 100).toFixed(1)}%</small></span><span class="pr">${fmtP(cur(t.it), us)}</span><span class="ch ${t.c > 0 ? 'up' : t.c < 0 ? 'down' : ''}">${pct(t.c)}</span>${spark(t.it)}</button>`).join('');
+  rows.innerHTML = items.map((t, i) => `<button type="button" class="cp-r${SEL[k] === t.it.s ? ' sel' : ''}" data-k="${k}" data-s="${esc(t.it.s)}"><span class="rk">${i + 1}</span><span class="nm">${esc(t.it.n)}<small>${us ? fmtUsCap(t.v) : fmtKrCap(t.v)} · ${(t.v / tot * 100).toFixed(1)}%</small></span><span class="pr">${fmtP(cur(t.it), us)}</span><span class="ch ${t.c > 0 ? 'up' : t.c < 0 ? 'down' : ''}">${pct(t.c)}${ext(t.it)}</span>${spark(t.it)}</button>`).join('');
 }
 function render(){
   document.querySelectorAll('#cpPer button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === P));
@@ -3810,8 +3817,14 @@ async function live(){
   if (!C || busy || document.hidden || $('tab-cap').hidden) return; busy = true;
   const all = [...(C.us || []), ...(C.kr || [])];
   let ok = 0;
-  await Promise.all(all.map(async x => { try { const m = (await fetch(`${PROXY}/chart/${encodeURIComponent(x.s)}?range=1d&interval=5m`).then(r => r.json())).chart.result[0].meta;
-    if (m.regularMarketPrice) { LIVE[x.s] = {p: m.regularMarketPrice, pc: m.chartPreviousClose}; ok++; } } catch(e){} }));
+  await Promise.all(all.map(async x => { try { const us = !/\.KS$/.test(x.s);
+    const r = (await fetch(`${PROXY}/chart/${encodeURIComponent(x.s)}?range=1d&interval=5m${us ? '&includePrePost=true' : ''}`).then(r => r.json())).chart.result[0], m = r.meta;
+    if (!m.regularMarketPrice) return;
+    const o = {p: m.regularMarketPrice, pc: m.chartPreviousClose}, ts = r.timestamp || [], cl = ((r.indicators.quote[0] || {}).close) || [], tp = m.currentTradingPeriod;
+    // 미국: 정규장 종가 시각 뒤에 찍힌 5분봉이 있으면 개장 전(프리) 또는 장 마감 후(애프터) 시세
+    if (us && tp) for (let i = ts.length - 1; i >= 0; i--) { if (cl[i] == null) continue;
+      if (ts[i] > m.regularMarketTime + 60 && (ts[i] < tp.regular.start || ts[i] >= tp.regular.end)) { o.x = cl[i]; o.k = ts[i] < tp.regular.start ? 'pre' : 'post'; } break; }
+    LIVE[x.s] = o; ok++; } catch(e){} }));
   if (ok) lastLive = Date.now(); busy = false; render();
 }
 async function load(){
