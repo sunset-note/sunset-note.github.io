@@ -2842,7 +2842,14 @@ let divSel = null;
 async function quote(s){
   const r = await fetch(`${PROXY}/chart/${encodeURIComponent(s)}?range=5d&interval=1d`); if (!r.ok) throw new Error(s);
   const x = (await r.json()).chart.result[0], m = x.meta;
-  return {px: m.regularMarketPrice, prev: prevClose(x), cur: m.currency, name: m.shortName || m.longName || s};
+  const q = {px: m.regularMarketPrice, prev: prevClose(x), cur: m.currency, name: m.shortName || m.longName || s};
+  if (!isKR(s)) try {   // 미국 종목: 개장 전·장 마감 후 시세가 있으면 그 가격, 오늘 변동은 마지막 정규장 종가 대비
+    const y = (await fetch(`${PROXY}/chart/${encodeURIComponent(s)}?range=1d&interval=5m&includePrePost=true`).then(r => r.json())).chart.result[0], n = y.meta, tp = n.currentTradingPeriod;
+    const ts = y.timestamp || [], cl = ((y.indicators.quote[0] || {}).close) || [];
+    if (tp) for (let i = ts.length - 1; i >= 0; i--) { if (cl[i] == null) continue;
+      if (ts[i] > n.regularMarketTime + 60 && (ts[i] < tp.regular.start || ts[i] >= tp.regular.end)) { q.px = cl[i]; q.prev = n.regularMarketPrice; q.ext = ts[i] < tp.regular.start ? 'pre' : 'post'; } break; }
+  } catch(e){}
+  return q;
 }
 function prevClose(x){   // 직전 거래일 종가: 마지막 봉이 오늘(최근 시세) 봉이면 그 앞 봉
   const ts = x.timestamp || [], c = x.indicators.quote[0].close, off = x.meta.gmtoffset || 0, L = [];
@@ -2921,18 +2928,19 @@ function render(){
   const c = calc(), pnl = c.val - c.cost;
   const byAcct = {}; for (const p of c.H) byAcct[p.acct] = (byAcct[p.acct] || 0) + (p.val || 0);
   const U = CUR === 'usd' && FX > 0, sU = v => (v >= 0 ? '+' : '') + usd(v), pnlU = c.valU - c.costU;
+  const xk = c.H.map(p => Q[p.sym] && Q[p.sym].ext).find(Boolean), xs = xk ? (xk === 'pre' ? '미국 개장 전 시세 반영 · ' : '미국 장 마감 후 시세 반영 · ') : '';
   const byAcctU = {}; for (const p of c.H) byAcctU[p.acct] = (byAcctU[p.acct] || 0) + (p.valU || 0);
   $('usKpis').innerHTML = !c.H.length ? kpi('평가액', '–', '아래에서 매수 기록을 추가하세요') + kpi('평가손익', '–', '') + kpi('그중 환차손익', '–', '') + kpi('오늘 변동', '–', '')
     : U ?
     kpi('평가액', usd(c.valU), Object.entries(byAcctU).map(([a, v]) => `${a} ${usd(v)}`).join(' · ')) +
     kpi('평가손익', sU(pnlU), `원금 ${usd(c.costU)} · ${pct(c.costU ? pnlU / c.costU : null)}`, cls(pnlU)) +
     kpi('적용 환율', FX.toFixed(1), '달러 종목 손익은 환율 효과 제외 · 국내 상장 ETF만 이 환율로 환산') +
-    kpi('오늘 변동', sU(c.dayU), `원금 대비 ${pct(c.costU ? c.dayU / c.costU : null)} · 실현손익 ${sU(c.realized / FX)}`, cls(c.dayU))
+    kpi('오늘 변동', sU(c.dayU), `${xs}원금 대비 ${pct(c.costU ? c.dayU / c.costU : null)} · 실현손익 ${sU(c.realized / FX)}`, cls(c.dayU))
     :
     kpi('평가액', man(c.val), Object.entries(byAcct).map(([a, v]) => `${a} ${man(v)}`).join(' · ')) +
     kpi('평가손익', sgn(pnl) + man(pnl), `원금 ${man(c.cost)} · ${pct(c.cost ? pnl / c.cost : null)}`, cls(pnl)) +
     kpi('그중 환차손익', sgn(c.fxPnl) + man(c.fxPnl), FX ? `달러 종목 · 지금 환율 ${FX.toFixed(1)}` : '환율 대기', cls(c.fxPnl)) +
-    kpi('오늘 변동', sgn(c.day) + man(c.day), `원금 대비 ${pct(c.cost ? c.day / c.cost : null)} · 실현손익 ${sgn(c.realized) + man(c.realized)}`, cls(c.day));
+    kpi('오늘 변동', sgn(c.day) + man(c.day), `${xs}원금 대비 ${pct(c.cost ? c.day / c.cost : null)} · 실현손익 ${sgn(c.realized) + man(c.realized)}`, cls(c.day));
   const H = c.H.slice().sort((a, b) => (b.val || 0) - (a.val || 0));
   $('usAlloc').innerHTML = c.val > 0 ? `<div class="us-bar">${H.map((p, i) => `<span style="width:${(p.val / c.val * 100).toFixed(2)}%;background:${COLORS[i % COLORS.length]}" title="${esc(nameOf(p.sym))}"></span>`).join('')}</div>
     <div class="us-leg">${H.map((p, i) => `<span><i style="background:${COLORS[i % COLORS.length]}"></i>${esc(nameOf(p.sym))} ${(p.val / c.val * 100).toFixed(1)}%</span>`).join('')}</div>` : '';
